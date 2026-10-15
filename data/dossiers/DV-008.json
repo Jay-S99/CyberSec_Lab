@@ -1,0 +1,18 @@
+{
+  "id": "DV-008",
+  "title": "DOOM Protocol",
+  "organization": "UNKNOWN",
+  "classification": "DOOM_LEVEL",
+  "status": "DRAFT",
+  "incident": {
+    "location": "Unconfirmed",
+    "threat_level": "UNKNOWN",
+    "summary": "Preliminary draft concerning an unidentified multiversal signature tracked under the working name DOOM Protocol. The source, intent, and physical reach of the signature are not established.",
+    "observations": [
+      "Sensors recorded a repeating pattern that does not match catalogued traffic.",
+      "No organization has claimed responsibility or requested coordination.",
+      "Analysts have not separated a genuine threat from a measurement error."
+    ],
+    "conclusion": "This file remains a draft. DOOM_LEVEL marks the classification of the subject, not an access role, and the record is not approved for release."
+  }
+}
