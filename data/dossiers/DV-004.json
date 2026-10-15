@@ -1,0 +1,18 @@
+{
+  "id": "DV-004",
+  "title": "The Blip",
+  "organization": "SWORD",
+  "classification": "INTERNAL",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Global",
+    "threat_level": "EXTREME",
+    "summary": "Internal record of the sudden disappearance of about half of all life and the later return of the missing population. The file tracks governance, logistics, and security effects rather than a single battlefield.",
+    "observations": [
+      "The disappearance was simultaneous and did not follow a conventional attack pattern.",
+      "The return created secondary crises in housing, identity, and airspace control.",
+      "No conventional perpetrator was available for detention when the event began."
+    ],
+    "conclusion": "The Blip is approved for internal circulation. It is not cleared for public release under the declassified tier."
+  }
+}
