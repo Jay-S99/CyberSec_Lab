@@ -1,0 +1,18 @@
+{
+  "id": "DV-001",
+  "title": "Battle of New York",
+  "organization": "SHIELD",
+  "classification": "DECLASSIFIED",
+  "status": "DECLASSIFIED",
+  "incident": {
+    "location": "New York City",
+    "threat_level": "HIGH",
+    "summary": "Declassified summary of an extraterrestrial assault on Manhattan and the joint response that contained it. A portal opened above the city, hostile infantry deployed into midtown, and civilian evacuation continued while the breach was closed.",
+    "observations": [
+      "The portal stayed open long enough for a coordinated ground assault.",
+      "Damage was concentrated in midtown infrastructure and transit corridors.",
+      "Containment required combined air, ground, and emergency-service coordination."
+    ],
+    "conclusion": "The file is retained as a declassified reference for urban extraterrestrial response. No active operational restriction remains on this record."
+  }
+}

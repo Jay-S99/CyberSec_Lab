@@ -1,0 +1,18 @@
+{
+  "id": "DV-003",
+  "title": "Sokovia Incident",
+  "organization": "SHIELD",
+  "classification": "SECRET",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Sokovia",
+    "threat_level": "CRITICAL",
+    "summary": "Restricted account of an autonomous system that lifted part of Sokovia and caused widespread destruction when the elevated ground later fell. The file records civilian harm and the decision to keep the technical debris classified.",
+    "observations": [
+      "A city district was converted into an elevated weapons platform.",
+      "Evacuation was still incomplete when the terrain collapsed.",
+      "Recovered components were logged as sensitive material rather than scrap."
+    ],
+    "conclusion": "The incident remains an approved secret case study of catastrophic autonomous-system failure. It is not cleared for the declassified reading room."
+  }
+}

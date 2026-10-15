@@ -12,35 +12,37 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-These controls are planned for later development phases. This repository currently contains the project foundation only.
+Authentication, password verification, and session handling are planned for later phases. This phase prepares the database, the permission catalog, and the fictional dossier collection those controls will use.
 
 ## Technology stack
 
 - Python 3.11 or newer
 - Flask
-- SQLite through Python's built-in `sqlite3` module (planned)
+- SQLite through Python's built-in `sqlite3` module
 - HTML, CSS, and JavaScript (planned interface)
 - Password hashing with `argon2-cffi` (planned)
 - pytest
 
 ## Current implementation status
 
-Implemented in this phase:
+Implemented:
 
 - Python virtual environment and pinned direct dependencies
-- Modular project layout for later security, authentication, and archive features
-- Minimal Flask application factory
-- `GET /health`, which returns HTTP 200 and `{"status": "ok"}`
-- Smoke test for the health endpoint
-- Empty `locales/` directory reserved for future English and Polish translations
+- Flask application factory and `GET /health`
+- SQLite database stored under `instance/`, with foreign keys enforced on every connection
+- Repeatable `init-db` and `seed-db` commands
+- Five roles, twelve permissions, and the least-privilege role mapping
+- Eight inactive user records, including the permanent `ADMIN` identity, with no passwords
+- Variant 10 security settings and the forbidden-word dictionary
+- Eight fictional dossier JSON files and matching dossier metadata
 
 Not implemented yet:
 
-- Authentication, registration, and password verification
-- Password policy and temporary passwords
-- Sessions and role-based access control
-- Database schema and seed data
-- Dossier management and the administrator interface
+- Login, password verification, and password hashing
+- Password-policy checks and temporary-password generation
+- Session creation and validation
+- Authorization checks on requests
+- Dossier viewing, editing, and the administrator interface
 - Page design and the language switcher
 
 ## Requirements
@@ -92,6 +94,21 @@ The same application can be started with:
 flask --app app run
 ```
 
+## Database
+
+Initialize the schema, then load seed data:
+
+```bash
+flask --app app init-db
+flask --app app seed-db
+```
+
+Both commands are safe to run again. `init-db` creates missing tables and indexes and does not delete existing rows. `seed-db` inserts missing catalog data and does not overwrite existing accounts, passwords, role assignments, settings, or dictionary entries.
+
+The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
+
+Seeded accounts are inactive and have no password hash. They cannot authenticate. Provisioning is described in [docs/rbac.md](docs/rbac.md). The schema, settings, and dossier layout are described in [docs/database.md](docs/database.md).
+
 ## Running tests
 
 From the repository root, with the virtual environment activated:
@@ -100,19 +117,24 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`.
+
 ## Project structure
 
 ```text
-app.py                  Flask application factory and health endpoint
-config.py               Application configuration
+app.py                  Flask application factory, CLI registration, and health endpoint
+config.py               Application configuration, including the database path
+database.py             SQLite connection management and init-db
+schema.sql              Table, constraint, and index definitions
+seed.py                 Idempotent seed data and seed-db
+docs/database.md        Schema, settings, and dossier storage
+docs/rbac.md            Roles, permission matrix, and account provisioning
 requirements.txt        Pinned direct dependencies
-schema.sql              Reserved for a future SQLite schema
-seed.py                 Reserved for future database seeding
+data/dossiers/          Fictional dossier JSON files
+data/wordlist.txt       Unused placeholder; the live dictionary is in SQLite
 auth/                   Future authentication and password modules
-security/               Future authorization, CSRF, and security logging
+security/               Future authorization and security logging
 modules/                Future administrator and dossier features
-data/dossiers/          Reserved for future dossier content
-data/wordlist.txt       Reserved for a future password denylist
 locales/                Reserved for future English and Polish translations
 templates/              Reserved for future HTML templates
 static/                 Reserved for future CSS, JavaScript, and images
@@ -125,11 +147,11 @@ Python modules under `auth/`, `security/`, and `modules/` are intentionally empt
 ## Planned features
 
 - User authentication and secure password storage with Argon2
-- Password policy checks and temporary passwords
+- Password policy checks and one-time temporary passwords
 - Server-side session management
-- Role-based access control for archive and administrator actions
-- SQLite persistence for accounts, sessions, and incident records
-- Classified dossier browsing for the fictional archive
+- Request authorization based on the role and permission catalog
+- Classified dossier browsing and incident submission
+- An administrator interface for accounts and security settings
 - A lightweight JSON translation layer with English as the default language and Polish as a second language
 
 ## Disclaimer

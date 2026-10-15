@@ -1,0 +1,18 @@
+{
+  "id": "DV-006",
+  "title": "Skrull Infiltration",
+  "organization": "SWORD",
+  "classification": "TOP_SECRET",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Multiple sites",
+    "threat_level": "CRITICAL",
+    "summary": "Restricted assessment of suspected shape-shifting infiltration inside partner organizations. The file records unresolved identity doubts and does not name a confirmed list of replaced personnel.",
+    "observations": [
+      "Some access events matched valid credentials used by the wrong person.",
+      "Biometric checks available at the time could not resolve the suspicion.",
+      "No public alert was issued because the evidence remained incomplete."
+    ],
+    "conclusion": "The infiltration file stays top secret. It is an approved intelligence product and is not eligible for declassified access."
+  }
+}

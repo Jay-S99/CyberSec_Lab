@@ -1,0 +1,18 @@
+{
+  "id": "DV-005",
+  "title": "Westview Anomaly",
+  "organization": "SWORD",
+  "classification": "SECRET",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Westview, New Jersey",
+    "threat_level": "HIGH",
+    "summary": "Approved report on a confined reality-distortion event that isolated Westview. Residents remained inside a changing artificial environment while observers recorded a stable outer boundary.",
+    "observations": [
+      "Ordinary communications did not cross the recorded perimeter.",
+      "Conditions inside the boundary changed in stages.",
+      "External checks found no conventional explosive or chemical source."
+    ],
+    "conclusion": "The anomaly is closed as a secret case. Further public detail would expose the methods used to detect a similar boundary."
+  }
+}

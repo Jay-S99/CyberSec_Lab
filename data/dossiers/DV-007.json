@@ -1,0 +1,18 @@
+{
+  "id": "DV-007",
+  "title": "HYDRA Archives",
+  "organization": "HYDRA",
+  "classification": "TOP_SECRET",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Recovered archive sites",
+    "threat_level": "HIGH",
+    "summary": "Summary of recovered historical records describing long-running covert programs attributed to HYDRA. The material was catalogued after seizure and is held as a restricted research file.",
+    "observations": [
+      "Recovered indexes refer to compartmented programs spread across several decades.",
+      "Part of the material duplicates records already known from earlier defections.",
+      "Names in the archive were not treated as active threats without corroboration."
+    ],
+    "conclusion": "The recovered archive is approved for limited top-secret research. It does not by itself authorize action against any living subject."
+  }
+}
