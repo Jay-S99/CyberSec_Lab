@@ -1,0 +1,18 @@
+{
+  "id": "DV-002",
+  "title": "Project Insight",
+  "organization": "SHIELD",
+  "classification": "SECRET",
+  "status": "APPROVED",
+  "incident": {
+    "location": "Washington, D.C.",
+    "threat_level": "CRITICAL",
+    "summary": "Approved assessment of a defensive surveillance program that was redirected by an internal infiltration. Trusted access was used to change who the system would target before the launch sequence was stopped.",
+    "observations": [
+      "Valid internal credentials altered the target-selection process.",
+      "Airborne launch platforms were prepared before the compromise was exposed.",
+      "Recovery required isolating both personnel records and command systems."
+    ],
+    "conclusion": "Project Insight is assessed as a captured defensive system, not an external strike. Distribution stays limited to personnel cleared for classified review."
+  }
+}
