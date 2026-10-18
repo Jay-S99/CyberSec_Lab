@@ -52,7 +52,7 @@ Stores an Argon2id hash, a creation time, an expiry time, and the time the tempo
 
 ### sessions
 
-Server-side sessions. `session_token_hash` is the SHA-256 digest of the cookie value and cannot be empty. `credential_kind` is `password` or `temporary`. `temporary_password_id` reserves the temporary credential that opened the session. `revoked_at` marks a logged-out, rotated, or expired session.
+Server-side sessions. `session_token_hash` is the SHA-256 digest of the cookie value and cannot be empty. `credential_kind` is `password` or `temporary`. `temporary_password_id` reserves the temporary credential that opened the session. `role_id_at_creation` records the server-side role context; a changed or missing context requires fresh authentication. `revoked_at` marks a logged-out, rotated, or expired session. `last_activity_at` and the rolling `expires_at` deadline are checked before renewal; there is no separate absolute lifetime. See [session_management.md](session_management.md).
 
 ### forbidden_words
 
@@ -91,7 +91,7 @@ Reserved for incident reports submitted by employees. `created_by` references `u
 
 ### security_events
 
-A basic event log. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, or other authentication secrets. Failed sign-in attempts record `login_failure` and a hash of the normalized username.
+A basic event log. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, or other authentication secrets. Failed sign-in attempts record `login_failure` and a hash of the normalized username. Session lifecycle operations record `session_created`, `session_expired`, `session_revoked`, and `session_logout` with fixed descriptions and UTC timestamps. Routine activity is not logged.
 
 ## Relationships
 
