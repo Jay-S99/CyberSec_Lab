@@ -11,6 +11,7 @@ MESSAGES = {
         "confirmation_mismatch": "Password confirmation does not match.",
         "current_password_incorrect": "Current password is incorrect.",
         "password_updated": "Your password has been updated.",
+        "session_expired": "Your session has expired. Please sign in again.",
         "temporary_credential_invalid": (
             "The temporary credential is no longer valid."
         ),

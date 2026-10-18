@@ -12,6 +12,8 @@ from seed import init_app as init_seed
 def create_app(config_class=Config):
     application = Flask(__name__, instance_relative_config=True)
     application.config.from_object(config_class)
+    if application.config.get("ENVIRONMENT") == "production":
+        application.config["AUTH_COOKIE_SECURE"] = True
     os.makedirs(application.instance_path, exist_ok=True)
     init_database(application)
     init_seed(application)

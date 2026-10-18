@@ -15,13 +15,21 @@ def new_csrf_token():
     return secrets.token_urlsafe(32)
 
 
+def cookies_require_secure_transport():
+    return (
+        current_app.config.get("ENVIRONMENT") == "production"
+        or bool(current_app.config.get("AUTH_COOKIE_SECURE"))
+        or request.is_secure
+    )
+
+
 def set_csrf_cookie(response, token):
     response.set_cookie(
         cookie_name(),
         token,
         max_age=CSRF_MAX_AGE_SECONDS,
         httponly=True,
-        secure=bool(request.is_secure),
+        secure=cookies_require_secure_transport(),
         samesite="Strict",
         path="/",
     )

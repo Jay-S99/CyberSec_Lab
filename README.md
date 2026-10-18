@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, and basic server-side sessions are implemented. Request authorization and dossier access are still planned. The database, permission catalog, and fictional dossier collection from the previous phase remain in place.
+Authentication, Argon2id password storage, temporary credentials, and Task2.1 session lifecycle security are implemented. Full RBAC enforcement belongs to Task2.2. Dossier access is still planned. The database, permission catalog, and fictional dossier collection from the previous phase remain in place.
 
 ## Technology stack
 
@@ -40,6 +40,11 @@ Implemented:
 - One-time temporary passwords and the local `provision-user` command
 - Login, mandatory first-password setup, and authenticated password change
 - Server-side sessions and CSRF protection for authentication forms
+- Configurable server-side inactivity expiration and authenticated activity tracking
+- Current, all-user, and other-session revocation helpers
+- Session identifier rotation after password changes and invalidation after provisioning
+- Live account-status and privilege-context checks, secure cookies, and session events
+- Expiration feedback and a CSRF-protected POST logout action
 
 Not implemented yet:
 
@@ -125,6 +130,16 @@ flask --app app provision-user ADMIN
 
 The command prints the temporary password once in that terminal. It is not stored in the repository. Sign in at `http://127.0.0.1:5000/login`, set a permanent password of at least 14 characters, and do not include a word from the organization dictionary. Details, including blocked accounts and password history, are in [docs/authentication.md](docs/authentication.md).
 
+## Session management (Task2.1)
+
+`settings.session_inactivity_timeout_minutes` defaults to 15 minutes. The backend checks both the last authenticated activity and the stored rolling deadline before renewing a session. Expired and revoked identifiers cannot be reused. Static assets, unknown routes, and health checks do not extend sessions.
+
+Session identifiers contain 256 random bits; only their SHA-256 hashes are stored. Authentication cookies remain HttpOnly, SameSite=Strict, and host-only, with path `/`. HTTPS requests use Secure cookies. Set `DOOMVAULT_ENV=production` before starting a production process to require Secure authentication and CSRF cookies even behind TLS termination. Local HTTP development remains available with the default environment. Production must be served over HTTPS.
+
+Password changes revoke existing sessions and issue a new identifier. Provisioning revokes all existing sessions. Blocked or inactive accounts are rejected during validation; a changed role requires fresh authentication without implementing role permission checks.
+
+See [docs/session_management.md](docs/session_management.md) for lifecycle semantics, configuration, reusable operations, security tests, and manual verification.
+
 ## Running tests
 
 From the repository root, with the virtual environment activated:
@@ -133,7 +148,7 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`.
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies.
 
 ## Project structure
 
@@ -144,13 +159,14 @@ database.py             SQLite connection management and init-db
 schema.sql              Table, constraint, and index definitions
 seed.py                 Idempotent seed data and seed-db
 docs/authentication.md  Password policy, provisioning, login, and sessions
+docs/session_management.md  Task2.1 session lifecycle, configuration, and verification
 docs/database.md        Schema, settings, and dossier storage
 docs/rbac.md            Roles and permission matrix
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
 auth/                   Password hashing, policy, login, and sessions
-security/               CSRF protection; authorization modules are still empty
+security/               CSRF protection and session security logging
 modules/                Future administrator and dossier features
 locales/                Reserved for future English and Polish translations
 templates/              Login, password change, and landing page
@@ -159,7 +175,7 @@ tests/                  Automated tests
 instance/               Local runtime data; database files are not committed
 ```
 
-Authorization modules under `security/` and `modules/` remain empty. Message codes for a future Polish catalog live in `auth/messages.py`.
+Authorization modules under `security/` and `modules/` remain empty. Task2.2 will enforce role permissions. Message codes for a future Polish catalog live in `auth/messages.py`.
 
 ## Planned features
 

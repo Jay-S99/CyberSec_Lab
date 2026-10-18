@@ -96,7 +96,7 @@ def _column_names(connection, table_name):
 
 
 def apply_schema_updates(connection):
-    """Add authentication columns to a database created before Task 1.2."""
+    """Add authentication and session columns to older databases."""
     changed = False
     if _table_exists(connection, "users"):
         if "is_blocked" not in _column_names(connection, "users"):
@@ -125,6 +125,15 @@ def apply_schema_updates(connection):
                 ALTER TABLE sessions
                 ADD COLUMN temporary_password_id INTEGER
                 REFERENCES temporary_passwords (id) ON DELETE RESTRICT
+                """
+            )
+            changed = True
+        if "role_id_at_creation" not in session_columns:
+            connection.execute(
+                """
+                ALTER TABLE sessions
+                ADD COLUMN role_id_at_creation INTEGER
+                REFERENCES roles (id) ON DELETE RESTRICT
                 """
             )
             changed = True

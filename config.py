@@ -5,6 +5,8 @@ class Config:
     DEBUG = False
     TESTING = False
     DATABASE = os.environ.get("DOOMVAULT_DATABASE", "doomvault.db")
+    ENVIRONMENT = os.environ.get("DOOMVAULT_ENV", "development")
+    AUTH_COOKIE_SECURE = ENVIRONMENT == "production"
     AUTH_COOKIE_NAME = "doomvault_session"
     CSRF_COOKIE_NAME = "doomvault_csrf"
     AUTH_COOKIE_SAMESITE = "Strict"

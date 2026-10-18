@@ -88,9 +88,11 @@ CREATE TABLE IF NOT EXISTS sessions (
         credential_kind IN ('password', 'temporary')
     ),
     temporary_password_id INTEGER,
+    role_id_at_creation INTEGER,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
     FOREIGN KEY (temporary_password_id) REFERENCES temporary_passwords (id)
-        ON DELETE RESTRICT
+        ON DELETE RESTRICT,
+    FOREIGN KEY (role_id_at_creation) REFERENCES roles (id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS forbidden_words (

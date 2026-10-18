@@ -20,6 +20,7 @@ from auth.password_policy import (
     password_expired,
     password_history_limit,
     password_validity_days,
+    session_timeout_minutes,
     validate_permanent_password,
 )
 from auth.passwords import (
@@ -34,13 +35,11 @@ from auth.sessions import (
     clear_session_cookie,
     cookie_name,
     create_session,
-    find_session_by_token,
     revoke_all_sessions,
     revoke_session,
-    session_is_active,
     set_session_cookie,
-    slide_session_expiry,
     temporary_credential_is_reserved,
+    validate_session,
 )
 from auth.temp_passwords import (
     CredentialRejected,
@@ -49,12 +48,13 @@ from auth.temp_passwords import (
 )
 from database import format_utc, get_db, immediate_transaction, utc_now
 from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
+from security.security_log import record_session_event
 
 
 bp = Blueprint("auth", __name__)
 
-_AUTHENTICATED_PATHS = {"/", "/password/change", "/logout"}
-_SETUP_PATHS = {"/password/change", "/logout"}
+_PUBLIC_ENDPOINTS = {"auth.login", "health", "static"}
+_SETUP_ENDPOINTS = {"auth.change_password", "auth.logout"}
 _NOTICES = {"password-updated": "password_updated"}
 
 
@@ -67,39 +67,34 @@ def init_app(app):
 
 def load_authenticated_session():
     _clear_auth_state()
+    if request.endpoint is None or request.endpoint in {"static", "health"}:
+        return None
     token = request.cookies.get(cookie_name(), "")
     if not token:
         return None
+    g.suppress_session_cookie = True
     try:
         connection = get_db()
-        row = find_session_by_token(connection, token)
-        now = utc_now()
-        if row is None:
+        with immediate_transaction(connection):
+            now = utc_now()
+            row, user, failure = validate_session(
+                connection, token, now, refresh=True
+            )
+            if failure is None:
+                max_age = session_timeout_minutes(connection) * 60
+                password_change_required = _requires_password_change(
+                    user, row, now, connection
+                )
+        if failure is not None:
+            g.session_expired = failure == "expired"
             return None
-        if row["revoked_at"] is not None:
-            return None
-        if not session_is_active(row, now):
-            revoke_session(connection, row["id"], now)
-            connection.commit()
-            return None
-        user = _user_by_id(connection, row["user_id"])
-        if user is None or user["is_active"] != 1 or user["is_blocked"] != 0:
-            revoke_session(connection, row["id"], now)
-            connection.commit()
-            return None
-        max_age = slide_session_expiry(connection, row["id"], now)
-        connection.commit()
-    except sqlite3.OperationalError:
-        _clear_auth_state()
+    except sqlite3.Error:
+        current_app.logger.error("Session validation could not be completed.")
         return None
     g.user = user
     g.auth_session = row
-    g.password_change_required = _requires_password_change(
-        user,
-        row,
-        now,
-        connection,
-    )
+    g.password_change_required = password_change_required
+    g.suppress_session_cookie = False
     g.session_token = token
     g.refresh_session_cookie = True
     g.session_max_age = max_age
@@ -107,11 +102,13 @@ def load_authenticated_session():
 
 
 def enforce_access_boundary():
-    if request.path not in _AUTHENTICATED_PATHS:
+    if request.endpoint is None or request.endpoint in _PUBLIC_ENDPOINTS:
         return None
     if g.user is None:
+        if g.get("session_expired"):
+            return redirect(url_for("auth.login", notice="session-expired"))
         return redirect(url_for("auth.login"))
-    if g.password_change_required and request.path not in _SETUP_PATHS:
+    if g.password_change_required and request.endpoint not in _SETUP_ENDPOINTS:
         return redirect(url_for("auth.change_password"))
     return None
 
@@ -145,7 +142,14 @@ def login():
             return redirect(url_for("auth.change_password"))
         return redirect(url_for("auth.home"))
     if request.method == "GET":
-        return _render("login.html", errors=())
+        expired = (
+            g.get("session_expired")
+            or request.args.get("notice") == "session-expired"
+        )
+        return _render(
+            "login.html", errors=(),
+            notice=translate("session_expired") if expired else None,
+        )
     if not csrf_tokens_match():
         return _render(
             "login.html",
@@ -201,7 +205,11 @@ def logout():
         )
     connection = get_db()
     with immediate_transaction(connection):
-        revoke_session(connection, g.auth_session["id"], utc_now())
+        now = utc_now()
+        if revoke_session(connection, g.auth_session["id"], now):
+            record_session_event(
+                connection, g.user["id"], "session_logout", now
+            )
     g.suppress_session_cookie = True
     g.issue_session_token = None
     g.refresh_session_cookie = False
@@ -277,6 +285,19 @@ class LoginSuccess:
 
 def open_authenticated_session(connection, result, now):
     with immediate_transaction(connection):
+        now = utc_now()
+        current_user = _user_by_id(connection, result.user["id"])
+        if (
+            current_user is None
+            or current_user["is_active"] != 1
+            or current_user["is_blocked"] != 0
+            or (
+                result.credential_kind == "password"
+                and current_user["password_hash"] != result.verified_hash
+            )
+        ):
+            raise CredentialRejected("invalid_credentials")
+        result.user = current_user
         if result.credential_kind == "temporary":
             if temporary_credential_is_reserved(
                 connection,
@@ -292,6 +313,7 @@ def open_authenticated_session(connection, result, now):
             if (
                 current is None
                 or current["id"] != result.temporary_password_id
+                or current["password_hash"] != result.verified_hash
             ):
                 raise CredentialRejected("temporary_credential_invalid")
         if result.replacement_hash:
@@ -347,6 +369,7 @@ def _submit_login():
             errors=(translate("invalid_credentials"),),
         )
     g.issue_session_token = token
+    g.suppress_session_cookie = False
     g.session_max_age = max_age
     if _success_requires_password_change(result, now):
         destination = url_for("auth.change_password")
@@ -384,6 +407,9 @@ def _submit_password_change(require_current):
             now,
         )
     except CredentialRejected as error:
+        if g.suppress_session_cookie:
+            notice = "session-expired" if g.session_expired else None
+            return redirect(url_for("auth.login", notice=notice), code=303)
         return _render_change(
             require_current,
             errors=(translate(error.code),),
@@ -402,37 +428,44 @@ def _submit_password_change(require_current):
 
 def _commit_password_change(connection, new_password, original_hash, now):
     with immediate_transaction(connection):
-        if g.auth_session["credential_kind"] == "temporary":
-            claimed = claim_unused_temporary_password(
-                connection,
-                g.auth_session["temporary_password_id"],
-                g.user["id"],
-                now,
+        now = utc_now()
+        row, user, failure = validate_session(
+            connection, g.session_token, now
+        )
+        if failure is None:
+            token, max_age = _replace_password_and_sessions(
+                connection, row, user, new_password, original_hash, now
             )
-            if not claimed:
-                raise CredentialRejected("temporary_credential_invalid")
-        else:
-            current = connection.execute(
-                "SELECT password_hash FROM users WHERE id = ?",
-                (g.user["id"],),
-            ).fetchone()
-            if current is None or current["password_hash"] != original_hash:
-                raise CredentialRejected("password_change_conflict")
-        persist_password_change(
+    if failure is not None:
+        g.suppress_session_cookie = True
+        g.refresh_session_cookie = False
+        g.session_expired = failure == "expired"
+        raise CredentialRejected("password_change_conflict")
+    return token, max_age
+
+
+def _replace_password_and_sessions(
+    connection, row, user, new_password, original_hash, now
+):
+    if row["credential_kind"] == "temporary":
+        claimed = claim_unused_temporary_password(
             connection,
-            g.user["id"],
-            new_password,
+            row["temporary_password_id"],
+            user["id"],
             now,
-            password_history_limit(connection),
         )
-        revoke_all_sessions(connection, g.user["id"], now)
-        _session_id, token, max_age = create_session(
-            connection,
-            g.user["id"],
-            now,
-            "password",
-            None,
-        )
+        if not claimed:
+            raise CredentialRejected("temporary_credential_invalid")
+    elif user["password_hash"] != original_hash:
+        raise CredentialRejected("password_change_conflict")
+    persist_password_change(
+        connection, user["id"], new_password, now,
+        password_history_limit(connection),
+    )
+    revoke_all_sessions(connection, user["id"], now)
+    _session_id, token, max_age = create_session(
+        connection, user["id"], now, "password"
+    )
     return token, max_age
 
 
@@ -607,3 +640,4 @@ def _clear_auth_state():
     g.suppress_session_cookie = False
     g.session_max_age = None
     g.refresh_session_cookie = False
+    g.session_expired = False
