@@ -1,6 +1,6 @@
 # Database
 
-DoomVault stores operational data in SQLite and dossier narratives in JSON files. The database holds identities, authorization data, security settings, and dossier metadata. It does not authenticate users in this phase.
+DoomVault stores operational data in SQLite and dossier narratives in JSON files. The database holds identities, authorization data, security settings, and dossier metadata. Authentication behavior is described in [authentication.md](authentication.md).
 
 ## Location
 
@@ -38,27 +38,27 @@ Composite primary key of `role_id` and `permission_id`. A role receives only the
 
 ### users
 
-One row per person. `username` is unique under case-insensitive comparison, so `ADMIN` and `admin` cannot both exist. `password_hash` is null until a future provisioning step stores an Argon2 hash. `role_id` is required. `is_active` and `must_change_password` are integers restricted to 0 or 1.
+One row per person. `username` is unique under case-insensitive comparison, so `ADMIN` and `admin` cannot both exist. `password_hash` stays null until a permanent Argon2id hash is stored. `role_id` is required. `is_active`, `is_blocked`, and `must_change_password` are integers restricted to 0 or 1.
 
-Seeded accounts are created with `password_hash` null, `is_active` 0, and `must_change_password` 1. `password_changed_at` stays null.
+Seeded accounts are created with `password_hash` null, `is_active` 0, `is_blocked` 0, and `must_change_password` 1. `password_changed_at` stays null. `is_blocked` marks an account that `provision-user` must not reactivate. `is_active` 0 with `is_blocked` 0 means the account is still waiting for its first temporary credential. Databases created before this column receive it on the next connection.
 
 ### password_history
 
-Stores previous password hashes for a future reuse limit. The hash column cannot be empty. No history rows are created during seeding.
+Stores previous Argon2id password hashes. The application keeps the newest rows up to `password_history_limit` and rejects those passwords during a later change. The hash column cannot be empty. No history rows are created during seeding.
 
 ### temporary_passwords
 
-Stores a hash, a creation time, an expiry time, and the time the temporary password was used. Plaintext passwords are never written here. The intended lifetime is the `temporary_password_validity_hours` setting, which is 12. Generation and expiry checks are not implemented yet.
+Stores an Argon2id hash, a creation time, an expiry time, and the time the temporary password was used. Plaintext passwords are never written here. The lifetime is `temporary_password_validity_hours`, which is 12. `provision-user` creates these rows. A row with `used_at` set cannot be used again.
 
 ### sessions
 
-Reserved for server-side sessions. `session_token_hash` is unique and cannot be empty. The table does not yet receive rows, and no session is created or validated.
+Server-side sessions. `session_token_hash` is the SHA-256 digest of the cookie value and cannot be empty. `credential_kind` is `password` or `temporary`. `temporary_password_id` reserves the temporary credential that opened the session. `revoked_at` marks a logged-out, rotated, or expired session.
 
 ### forbidden_words
 
 The editable denylist used by the future password policy. Before insert, a word is stripped and casefolded, and internal whitespace is rejected. The normalized value is unique. The seed list contains organization words, English month and season names, and the Polish season words `wiosna`, `lato`, `jesien`, and `zima`.
 
-`data/wordlist.txt` remains an empty placeholder. The live dictionary is this table so a future administrator screen can edit it.
+`data/wordlist.txt` is the word source for temporary passwords. It is separate from this table. The live forbidden-word dictionary remains here so a later administrator screen can edit it.
 
 ### settings
 
@@ -66,14 +66,14 @@ One row per configuration key. Values are text. Integer settings use decimal tex
 
 | Key | Initial value | Meaning |
 | --- | --- | --- |
-| `minimum_password_length` | `14` | Minimum length for a future password check |
+| `minimum_password_length` | `14` | Minimum length for a permanent password |
 | `forbidden_words_enabled` | `true` | The forbidden-word rule starts enabled |
-| `temporary_password_validity_hours` | `12` | Lifetime of a future temporary password |
+| `temporary_password_validity_hours` | `12` | Lifetime of a temporary password |
 | `password_history_limit` | `5` | Number of previous hashes to reject for reuse |
-| `session_inactivity_timeout_minutes` | `15` | Future idle timeout |
+| `session_inactivity_timeout_minutes` | `15` | Inactivity window applied to a session |
 | `password_validity_days` | `0` | `0` disables periodic password expiration |
 
-An administrator will be able to change password validity later. A value of `0` means passwords do not expire on a schedule until that value is raised. The future temporary password format is three randomly selected words followed by two digits. This phase does not generate or validate passwords.
+A value of `0` for password validity means permanent passwords do not expire on a schedule until that value is raised. There is no settings screen yet. Temporary passwords use three randomly selected words followed by two digits.
 
 ### dossiers
 
@@ -91,7 +91,7 @@ Reserved for incident reports submitted by employees. `created_by` references `u
 
 ### security_events
 
-A basic event log for later modules. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, or other authentication secrets. This phase does not write audit events.
+A basic event log. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, or other authentication secrets. Failed sign-in attempts record `login_failure` and a hash of the normalized username.
 
 ## Relationships
 
