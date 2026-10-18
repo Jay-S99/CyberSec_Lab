@@ -3,6 +3,9 @@
 {% block content %}
 <h1>DoomVault</h1>
 <h2>Sign in</h2>
+{% if notice %}
+  <p role="status">{{ notice }}</p>
+{% endif %}
 {% if errors %}
   <div role="alert">
     {% for error in errors %}
