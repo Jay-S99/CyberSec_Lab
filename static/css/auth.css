@@ -1,0 +1,80 @@
+:root {
+  color: #1b1b1b;
+  background: #f7f7f5;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 32rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+}
+
+h1,
+h2 {
+  line-height: 1.2;
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid #6b6b6b;
+  font: inherit;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #1b1b1b;
+  background: #1b1b1b;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+button + button,
+form + form button {
+  background: #ffffff;
+  color: #1b1b1b;
+}
+
+a {
+  color: #0b3a82;
+}
+
+[role="alert"] {
+  padding: 0.75rem;
+  border: 1px solid #8a1f1f;
+  background: #fff4f4;
+}
+
+[role="status"] {
+  padding: 0.75rem;
+  border: 1px solid #1f6b3a;
+  background: #f3fff6;
+}
+
+:focus {
+  outline: 3px solid #0b3a82;
+  outline-offset: 2px;
+}
