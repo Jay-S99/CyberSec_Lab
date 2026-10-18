@@ -58,19 +58,8 @@ Seed records are not authenticated users. An inactive row with a null password h
 
 `ADMIN` is permanent as an identity. The username is stored in that exact case, and the case-insensitive unique constraint prevents a second `admin` account. The other seven rows are disposable test identities.
 
-Every seeded account is inactive, has `password_hash` set to null, has `must_change_password` set, and has no password history or temporary password. None of these accounts can authenticate. Running `seed-db` again does not reset a password, role, or active flag once the row exists.
+Every seeded account is inactive, has `password_hash` set to null, has `must_change_password` set, and has no password history or temporary password. None of these accounts can authenticate until provisioning. Running `seed-db` again does not reset a password, role, or active flag once the row exists.
 
-## Future provisioning
+## Account provisioning
 
-A later phase will provision an account without storing a chosen password:
-
-1. Generate a temporary password as three random words followed by two digits.
-2. Show that plaintext once, outside the database, and store only an Argon2 hash in `temporary_passwords`.
-3. Set `expires_at` from `temporary_password_validity_hours`, initially 12 hours.
-4. On first use, require a new password before the account becomes active.
-5. Store the new Argon2 hash on the user, record the previous hash in `password_history`, and set `password_changed_at`.
-6. Reject reuse of the previous hashes up to `password_history_limit`, initially 5.
-7. Apply `minimum_password_length` (14) and, while `forbidden_words_enabled` is true, the dictionary in `forbidden_words`.
-8. Honor `password_validity_days` only when an administrator sets it above 0.
-
-Session support will store a hash of the session identifier and apply `session_inactivity_timeout_minutes`, initially 15. This phase does not generate passwords, open sessions, or accept logins.
+`flask --app app provision-user USERNAME` issues a temporary password for an existing row. It does not create users and it does not assign roles. The authentication flow, the variant 10 password rules, and session handling are documented in [authentication.md](authentication.md). A role grant still does not authenticate the person, and this phase does not enforce the permission matrix on requests.
