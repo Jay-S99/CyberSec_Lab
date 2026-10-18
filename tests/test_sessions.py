@@ -1,7 +1,7 @@
 import hashlib
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
-from database import apply_schema_updates, format_utc, get_db, init_db, utc_now
+from database import apply_schema_updates, format_utc, get_db, init_db
 from tests.helpers import (
     csrf_token,
     location_path,
@@ -145,19 +145,23 @@ def test_get_logout_is_not_accepted(app, client):
     assert client.get("/").status_code == 200
 
 
-def test_inactivity_window_slides_forward(app, client):
+def test_inactivity_window_slides_forward(app, client, monkeypatch):
+    now = datetime(2026, 10, 18, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("auth.login.utc_now", lambda: now)
+    monkeypatch.setattr("auth.temp_passwords.utc_now", lambda: now)
     prepare_database(app)
     _activate(app, client, "editor02")
-    soon = format_utc(utc_now() + timedelta(seconds=30))
+    now += timedelta(minutes=14)
+    soon = format_utc(now + timedelta(seconds=30))
     with app.app_context():
         connection = get_db()
         connection.execute(
             """
             UPDATE sessions
-            SET expires_at = ?, last_activity_at = ?
+            SET expires_at = ?
             WHERE revoked_at IS NULL
             """,
-            (soon, "2026-01-01T00:00:00Z"),
+            (soon,),
         )
         connection.commit()
 
@@ -226,6 +230,7 @@ def test_legacy_database_receives_authentication_columns(app):
     assert "is_blocked" in user_columns
     assert "credential_kind" in session_columns
     assert "temporary_password_id" in session_columns
+    assert "role_id_at_creation" in session_columns
     assert deleted is False
 
 
