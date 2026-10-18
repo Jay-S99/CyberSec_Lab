@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Archive - DoomVault{% endblock %}
+{% block content %}
+<h1>DoomVault</h1>
+<p>Signed in as {{ username }}.</p>
+{% if notice %}
+  <p role="status">{{ notice }}</p>
+{% endif %}
+{% if errors %}
+  <div role="alert">
+    {% for error in errors %}
+      <p>{{ error }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+<p>Authenticated session established. Dossier access is not available in this phase.</p>
+<p><a href="{{ url_for('auth.change_password') }}">Change password</a></p>
+<form method="post" action="{{ url_for('auth.logout') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">Log out</button>
+</form>
+{% endblock %}
