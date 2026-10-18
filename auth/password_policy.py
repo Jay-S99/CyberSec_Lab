@@ -61,10 +61,11 @@ def password_validity_days(connection):
 
 
 def session_timeout_minutes(connection):
-    return _positive_int(
+    minutes = _positive_int(
         _setting(connection, "session_inactivity_timeout_minutes"),
         15,
     )
+    return minutes if minutes <= 365 * 24 * 60 else 15
 
 
 def password_expired(password_changed_at, validity_days, now):
