@@ -1,6 +1,6 @@
 # Authentication
 
-DoomVault authenticates people with Argon2id password hashes, one-time temporary credentials, and server-side sessions. This phase does not authorize dossier access. Role checks and session administration continue in the next phase.
+DoomVault authenticates people with Argon2id password hashes, one-time temporary credentials, and server-side sessions. Task2.1 hardens the session lifecycle. Full RBAC enforcement belongs to Task2.2; session administration screens remain planned.
 
 ## Password storage
 
@@ -56,9 +56,9 @@ Password changes and provisioning run in a database transaction.
 
 ## Sessions and CSRF
 
-The session cookie is `doomvault_session`. Its value is a random identifier. SQLite stores only the SHA-256 digest in `sessions.session_token_hash`. The cookie is HttpOnly and SameSite=Strict. The Secure flag is set when the request is HTTPS. The identifier is not placed in a URL.
+The session cookie is `doomvault_session`. Its value contains 256 random bits. SQLite stores only the SHA-256 digest in `sessions.session_token_hash`. The cookie is HttpOnly and SameSite=Strict. HTTPS requests use Secure cookies; `DOOMVAULT_ENV=production` requires Secure authentication and CSRF cookies regardless of the internal request scheme. The identifier is not placed in a URL.
 
-Each request loads the session from the database. A missing, revoked, or expired session is not authenticated. Expired sessions are revoked when they are presented. While the session is in use, `last_activity_at` and `expires_at` move forward by `session_inactivity_timeout_minutes` (seeded as 15). The browser cookie lifetime is refreshed with that window. Richer session administration remains later work.
+Application requests validate the session centrally against the current account status and role context. Missing, revoked, malformed, or expired identifiers cannot authenticate. Both `last_activity_at` and the existing rolling `expires_at` deadline must permit renewal under `session_inactivity_timeout_minutes` (seeded as 15). Valid authenticated activity updates the timestamp, deadline, and cookie lifetime; static assets and health checks do not. Task2.1 lifecycle details and verification are documented in [session_management.md](session_management.md).
 
 `credential_kind` is `temporary` or `password`. The application does not trust a role or a signed-in flag sent by the browser. Logout is `POST /logout`. It revokes the current session and clears the cookie. Login, logout, and password change require a CSRF token stored in the `doomvault_csrf` cookie and submitted with the form.
 
