@@ -12,15 +12,15 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, password verification, and session handling are planned for later phases. This phase prepares the database, the permission catalog, and the fictional dossier collection those controls will use.
+Authentication, Argon2id password storage, temporary credentials, and basic server-side sessions are implemented. Request authorization and dossier access are still planned. The database, permission catalog, and fictional dossier collection from the previous phase remain in place.
 
 ## Technology stack
 
 - Python 3.11 or newer
 - Flask
 - SQLite through Python's built-in `sqlite3` module
-- HTML, CSS, and JavaScript (planned interface)
-- Password hashing with `argon2-cffi` (planned)
+- HTML, CSS, and JavaScript
+- Password hashing with `argon2-cffi` (Argon2id)
 - pytest
 
 ## Current implementation status
@@ -32,18 +32,22 @@ Implemented:
 - SQLite database stored under `instance/`, with foreign keys enforced on every connection
 - Repeatable `init-db` and `seed-db` commands
 - Five roles, twelve permissions, and the least-privilege role mapping
-- Eight inactive user records, including the permanent `ADMIN` identity, with no passwords
+- Eight user records, including the permanent `ADMIN` identity, with no passwords until provisioning
 - Variant 10 security settings and the forbidden-word dictionary
 - Eight fictional dossier JSON files and matching dossier metadata
+- Argon2id password hashing and verification
+- Variant 10 password policy, password history, and password expiration
+- One-time temporary passwords and the local `provision-user` command
+- Login, mandatory first-password setup, and authenticated password change
+- Server-side sessions and CSRF protection for authentication forms
 
 Not implemented yet:
 
-- Login, password verification, and password hashing
-- Password-policy checks and temporary-password generation
-- Session creation and validation
 - Authorization checks on requests
 - Dossier viewing, editing, and the administrator interface
-- Page design and the language switcher
+- Management screens for accounts, settings, and the forbidden-word dictionary
+- Advanced session administration
+- Page design beyond the authentication forms, and the language switcher
 
 ## Requirements
 
@@ -107,7 +111,19 @@ Both commands are safe to run again. `init-db` creates missing tables and indexe
 
 The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
 
-Seeded accounts are inactive and have no password hash. They cannot authenticate. Provisioning is described in [docs/rbac.md](docs/rbac.md). The schema, settings, and dossier layout are described in [docs/database.md](docs/database.md).
+Seeded accounts are inactive and have no password hash. They cannot authenticate until a local operator provisions them. The command, the variant 10 password rules, and the session behavior are described in [docs/authentication.md](docs/authentication.md). Roles and the permission matrix are described in [docs/rbac.md](docs/rbac.md). The schema, settings, and dossier layout are described in [docs/database.md](docs/database.md).
+
+## Authentication
+
+Initialize the database, load seed data, and issue a one-time temporary password:
+
+```bash
+flask --app app init-db
+flask --app app seed-db
+flask --app app provision-user ADMIN
+```
+
+The command prints the temporary password once in that terminal. It is not stored in the repository. Sign in at `http://127.0.0.1:5000/login`, set a permanent password of at least 14 characters, and do not include a word from the organization dictionary. Details, including blocked accounts and password history, are in [docs/authentication.md](docs/authentication.md).
 
 ## Running tests
 
@@ -127,32 +143,31 @@ config.py               Application configuration, including the database path
 database.py             SQLite connection management and init-db
 schema.sql              Table, constraint, and index definitions
 seed.py                 Idempotent seed data and seed-db
+docs/authentication.md  Password policy, provisioning, login, and sessions
 docs/database.md        Schema, settings, and dossier storage
-docs/rbac.md            Roles, permission matrix, and account provisioning
+docs/rbac.md            Roles and permission matrix
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
-data/wordlist.txt       Unused placeholder; the live dictionary is in SQLite
-auth/                   Future authentication and password modules
-security/               Future authorization and security logging
+data/wordlist.txt       Wordlist used for temporary passwords
+auth/                   Password hashing, policy, login, and sessions
+security/               CSRF protection; authorization modules are still empty
 modules/                Future administrator and dossier features
 locales/                Reserved for future English and Polish translations
-templates/              Reserved for future HTML templates
-static/                 Reserved for future CSS, JavaScript, and images
+templates/              Login, password change, and landing page
+static/                 Stylesheet for the authentication pages
 tests/                  Automated tests
 instance/               Local runtime data; database files are not committed
 ```
 
-Python modules under `auth/`, `security/`, and `modules/` are intentionally empty. Interface templates are present as empty files so later phases can add behavior without changing the layout.
+Authorization modules under `security/` and `modules/` remain empty. Message codes for a future Polish catalog live in `auth/messages.py`.
 
 ## Planned features
 
-- User authentication and secure password storage with Argon2
-- Password policy checks and one-time temporary passwords
-- Server-side session management
 - Request authorization based on the role and permission catalog
 - Classified dossier browsing and incident submission
-- An administrator interface for accounts and security settings
-- A lightweight JSON translation layer with English as the default language and Polish as a second language
+- An administrator interface for accounts, blocked users, and security settings
+- Advanced session administration
+- A lightweight translation layer with English as the default language and Polish as a second language
 
 ## Disclaimer
 

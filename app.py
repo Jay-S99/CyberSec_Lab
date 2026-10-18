@@ -2,6 +2,8 @@ import os
 
 from flask import Flask, jsonify
 
+from auth.login import init_app as init_login
+from auth.temp_passwords import init_app as init_provisioning
 from config import Config
 from database import init_app as init_database
 from seed import init_app as init_seed
@@ -13,6 +15,8 @@ def create_app(config_class=Config):
     os.makedirs(application.instance_path, exist_ok=True)
     init_database(application)
     init_seed(application)
+    init_login(application)
+    init_provisioning(application)
 
     @application.get("/health")
     def health():

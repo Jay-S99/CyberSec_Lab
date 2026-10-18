@@ -2,6 +2,10 @@
 -- Application code maintains created_at and updated_at. There are no update triggers.
 -- security_events stores event metadata only. It must never store passwords,
 -- password hashes, session tokens, or other authentication secrets.
+-- is_blocked distinguishes an explicitly blocked account from one that is only
+-- waiting for its first temporary credential.
+-- sessions.credential_kind records whether the session used a temporary credential.
+-- sessions store a SHA-256 digest of the session identifier, never the identifier.
 
 CREATE TABLE IF NOT EXISTS roles (
     id INTEGER PRIMARY KEY,
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT CHECK (password_hash IS NULL OR length(password_hash) > 0),
     role_id INTEGER NOT NULL,
     is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+    is_blocked INTEGER NOT NULL DEFAULT 0 CHECK (is_blocked IN (0, 1)),
     must_change_password INTEGER NOT NULL DEFAULT 1 CHECK (must_change_password IN (0, 1)),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -79,7 +84,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_activity_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,
     revoked_at TEXT,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT
+    credential_kind TEXT NOT NULL DEFAULT 'password' CHECK (
+        credential_kind IN ('password', 'temporary')
+    ),
+    temporary_password_id INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
+    FOREIGN KEY (temporary_password_id) REFERENCES temporary_passwords (id)
+        ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS forbidden_words (
@@ -156,3 +167,19 @@ CREATE INDEX IF NOT EXISTS idx_incident_reports_created_by ON incident_reports (
 CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_security_events_event_type ON security_events (event_type);
 CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events (created_at);
+
+CREATE TRIGGER IF NOT EXISTS prevent_admin_username_change
+BEFORE UPDATE OF username ON users
+FOR EACH ROW
+WHEN OLD.username = 'ADMIN' AND NEW.username <> 'ADMIN'
+BEGIN
+    SELECT RAISE(ABORT, 'The permanent ADMIN account cannot be renamed.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS prevent_admin_delete
+BEFORE DELETE ON users
+FOR EACH ROW
+WHEN OLD.username = 'ADMIN'
+BEGIN
+    SELECT RAISE(ABORT, 'The permanent ADMIN account cannot be deleted.');
+END;
