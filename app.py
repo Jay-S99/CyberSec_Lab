@@ -26,6 +26,12 @@ def create_app(config_class=Config):
     application.register_blueprint(dossiers_blueprint)
     init_errors(application)
 
+    @application.context_processor
+    def user_management_navigation():
+        from security.permissions import has_permission
+
+        return {"can_manage_users": has_permission("users.manage")}
+
     @application.get("/health")
     def health():
         return jsonify(status="ok")

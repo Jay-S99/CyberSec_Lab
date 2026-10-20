@@ -126,12 +126,17 @@ def validate_session(connection, token, now, *, refresh=False):
     user = connection.execute(
         """
         SELECT id, username, password_hash, role_id, is_active, is_blocked,
-               must_change_password, password_changed_at
+               must_change_password, password_changed_at, deleted_at
         FROM users WHERE id = ?
         """,
         (row["user_id"],),
     ).fetchone()
-    if user is None or user["is_active"] != 1 or user["is_blocked"] != 0:
+    if (
+        user is None
+        or user["is_active"] != 1
+        or user["is_blocked"] != 0
+        or user["deleted_at"] is not None
+    ):
         revoke_user_sessions(connection, row["user_id"], now)
         return None, None, "revoked"
     if row["role_id_at_creation"] != user["role_id"]:

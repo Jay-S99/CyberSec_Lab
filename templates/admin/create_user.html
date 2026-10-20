@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% block title %}Create user - DoomVault{% endblock %}
+{% block admin_content %}
+<h1>Create user</h1>
+<p>New accounts await provisioning. Generate a temporary credential now, or provision the account later from the user list.</p>
+<form class="admin-account-form" method="post" action="{{ url_for('admin.create_user') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% include "admin/_user_fields.html" %}
+  <label class="admin-check" for="provision">
+    <input id="provision" name="provision" type="checkbox" value="yes"{% if values.get('provision') == 'yes' %} checked{% endif %}>
+    <span>Generate a first-login temporary credential</span>
+  </label>
+  <p class="admin-muted">Temporary credentials are valid for 12 hours and are displayed once. The user must choose a new permanent password at first sign-in.</p>
+  <div class="admin-form-actions">
+    <button type="submit">Create user</button>
+    <a href="{{ url_for('admin.users') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+{% block title %}User management - DoomVault{% endblock %}
+{% block admin_content %}
+<div class="admin-heading">
+  <div>
+    <h1>User management</h1>
+    <p class="admin-muted">Review non-deleted accounts and manage their access.</p>
+  </div>
+  <a class="admin-button" href="{{ url_for('admin.new_user') }}">Create user</a>
+</div>
+<form class="admin-filters" method="get" action="{{ url_for('admin.users') }}">
+  <div>
+    <label for="search">Username</label>
+    <input id="search" name="search" type="search" value="{{ filters.search }}" placeholder="Search usernames">
+  </div>
+  <div>
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      <option value="">All roles</option>
+      {% for role in roles %}
+        <option value="{{ role.id }}"{% if filters.role|string == role.id|string %} selected{% endif %}>{{ role.name|title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="status">Account status</label>
+    <select id="status" name="status">
+      <option value="">All statuses</option>
+      <option value="pending"{% if filters.status == 'pending' %} selected{% endif %}>Pending provisioning</option>
+      <option value="active"{% if filters.status == 'active' %} selected{% endif %}>Active</option>
+      <option value="blocked"{% if filters.status == 'blocked' %} selected{% endif %}>Blocked</option>
+    </select>
+  </div>
+  <div class="admin-filter-actions">
+    <button type="submit">Filter users</button>
+    <a href="{{ url_for('admin.users') }}">Clear</a>
+  </div>
+</form>
+<div class="admin-table-scroll" tabindex="0" role="region" aria-label="User accounts">
+  <table class="admin-table">
+    <caption>{{ users|length }} account{% if users|length != 1 %}s{% endif %} found</caption>
+    <thead>
+      <tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Created (UTC)</th><th scope="col">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+        {% set is_self = g.user and g.user.id == user.id %}
+        {% set is_permanent = user.username|upper == 'ADMIN' %}
+        <tr>
+          <th scope="row">
+            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ user.username }}</a>
+            {% if is_self %}<span class="admin-muted">(you)</span>{% endif %}
+            {% if is_permanent %}<span class="admin-protected">Protected identity</span>{% endif %}
+          </th>
+          <td>{{ user.role_name|title }}</td>
+          <td><span class="admin-status admin-status-{{ user.account_status }}">{% if user.account_status == 'pending' %}Pending provisioning{% else %}{{ user.account_status|title }}{% endif %}</span></td>
+          <td class="admin-date">{{ user.created_at }}</td>
+          <td>
+            <div class="admin-row-actions">
+              <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="admin-secondary" type="submit">{% if user.account_status == 'pending' %}Generate credential{% else %}Reset password{% endif %}</button>
+              </form>
+              {% if user.account_status == 'blocked' %}
+                <form method="post" action="{{ url_for('admin.unblock_user', user_id=user.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="admin-secondary" type="submit">Unblock</button>
+                </form>
+              {% elif not is_self and not is_permanent %}
+                <form method="post" action="{{ url_for('admin.block_user', user_id=user.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="admin-secondary" type="submit">Block</button>
+                </form>
+              {% endif %}
+              {% if not is_self and not is_permanent %}
+                <details class="admin-delete">
+                  <summary>Delete account</summary>
+                  <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <p>Deletion removes access and preserves historical records. This account cannot be restored.</p>
+                    <label class="admin-check" for="confirm-delete-{{ user.id }}">
+                      <input id="confirm-delete-{{ user.id }}" name="confirm_delete" type="checkbox" value="yes" required>
+                      <span>I confirm deletion of {{ user.username }}.</span>
+                    </label>
+                    <button class="admin-danger" type="submit">Delete {{ user.username }}</button>
+                  </form>
+                </details>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No accounts match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="admin-muted">Blocking, role changes, and password resets revoke existing sessions. Unblocking preserves credential validity; an account without usable credentials still needs provisioning.</p>
+{% endblock %}

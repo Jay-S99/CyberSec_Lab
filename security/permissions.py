@@ -38,6 +38,7 @@ def _current_user():
             SELECT users.id, users.role_id, roles.name AS role_name
             FROM users JOIN roles ON roles.id = users.role_id
             WHERE users.id = ? AND users.is_active = 1 AND users.is_blocked = 0
+              AND users.deleted_at IS NULL
             """,
             (user_id,),
         ).fetchone()
@@ -53,25 +54,35 @@ def _current_user():
     return user
 
 
+def get_role_permissions(connection, role_id):
+    rows = connection.execute(
+        """
+        SELECT roles.name AS role_name, permissions.name AS permission_name
+        FROM roles
+        LEFT JOIN role_permissions ON role_permissions.role_id = roles.id
+        LEFT JOIN permissions ON permissions.id = role_permissions.permission_id
+        WHERE roles.id = ?
+        """,
+        (role_id,),
+    ).fetchall()
+    if not rows or any(row["role_name"] not in ROLE_NAMES for row in rows):
+        return frozenset()
+    names = frozenset(
+        row["permission_name"] for row in rows
+        if row["permission_name"] is not None
+    )
+    return names if names <= PERMISSION_NAMES else frozenset()
+
+
 def get_user_permissions():
     user = _current_user()
     if user is None:
         return frozenset()
     try:
-        rows = get_db().execute(
-            """
-            SELECT permissions.name
-            FROM role_permissions
-            JOIN permissions ON permissions.id = role_permissions.permission_id
-            WHERE role_permissions.role_id = ?
-            """,
-            (user["role_id"],),
-        ).fetchall()
+        return get_role_permissions(get_db(), user["role_id"])
     except sqlite3.Error:
         current_app.logger.error("Permission data could not be read.")
         return frozenset()
-    names = frozenset(row["name"] for row in rows)
-    return names if names <= PERMISSION_NAMES else frozenset()
 
 
 def has_permission(permission):
