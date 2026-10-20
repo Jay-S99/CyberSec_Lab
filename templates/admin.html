@@ -1,8 +1,14 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
 {% block title %}Administration - DoomVault{% endblock %}
-{% block content %}
-<h1>DoomVault Administration</h1>
-<p>Authorized personnel administration area.</p>
-<p>Account management features will be introduced in Task3.</p>
-<p><a href="{{ url_for('auth.home') }}">Return to DoomVault</a></p>
+{% block admin_content %}
+<h1>Administration</h1>
+<p>Manage user accounts, roles, and access to DoomVault.</p>
+<dl class="admin-summary" aria-label="User account summary">
+  <div><dt>Total accounts</dt><dd>{{ counts.total }}</dd></div>
+  <div><dt>Active</dt><dd>{{ counts.active }}</dd></div>
+  <div><dt>Pending provisioning</dt><dd>{{ counts.pending }}</dd></div>
+  <div><dt>Blocked</dt><dd>{{ counts.blocked }}</dd></div>
+</dl>
+<p><a class="admin-button" href="{{ url_for('admin.users') }}">Manage users</a></p>
+<p class="admin-muted">Deleted accounts are excluded from these totals. Pending accounts need a valid temporary credential before their first sign-in.</p>
 {% endblock %}
