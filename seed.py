@@ -56,6 +56,10 @@ PERMISSIONS = (
         "Read dossiers that are still classified.",
     ),
     (
+        "dossiers.read_doom_level",
+        "Read submitted or approved DOOM_LEVEL dossiers with classified access.",
+    ),
+    (
         "dossiers.read_own_drafts",
         "Read dossier drafts owned by the current user.",
     ),
@@ -85,6 +89,7 @@ ROLE_PERMISSIONS = {
     "manager": (
         "dossiers.read_declassified",
         "dossiers.read_classified",
+        "dossiers.read_doom_level",
         "dossiers.review",
         "dossiers.declassify",
     ),
@@ -160,7 +165,7 @@ CLASSIFICATIONS = frozenset(
     {"DECLASSIFIED", "INTERNAL", "SECRET", "TOP_SECRET", "DOOM_LEVEL"}
 )
 DOSSIER_STATUSES = frozenset(
-    {"DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "DECLASSIFIED"}
+    {"DRAFT", "PENDING", "SUBMITTED", "APPROVED", "REJECTED", "DECLASSIFIED"}
 )
 THREAT_LEVELS = frozenset(
     {"LOW", "MODERATE", "HIGH", "CRITICAL", "EXTREME", "UNKNOWN"}
@@ -193,9 +198,16 @@ def seed_database():
     _require_schema(connection)
     timestamp = utc_timestamp()
     try:
+        existing_roles = {
+            row["name"] for row in connection.execute("SELECT name FROM roles")
+        }
+        existing_permissions = {
+            row["name"]
+            for row in connection.execute("SELECT name FROM permissions")
+        }
         _seed_roles(connection)
         _seed_permissions(connection)
-        _seed_role_permissions(connection)
+        _seed_role_permissions(connection, existing_roles, existing_permissions)
         _seed_users(connection, timestamp)
         _seed_settings(connection)
         _seed_forbidden_words(connection, timestamp)
@@ -293,10 +305,15 @@ def _seed_permissions(connection):
         )
 
 
-def _seed_role_permissions(connection):
+def _seed_role_permissions(connection, existing_roles, existing_permissions):
     for role_name, permission_names in ROLE_PERMISSIONS.items():
         role_id = _role_id(connection, role_name)
         for permission_name in permission_names:
+            if (
+                role_name in existing_roles
+                and permission_name in existing_permissions
+            ):
+                continue
             permission_id = _permission_id(connection, permission_name)
             connection.execute(
                 """
@@ -436,7 +453,7 @@ def _load_dossiers():
             raise ValueError(
                 f"Dossier file is not valid JSON: {file_name}"
             ) from error
-        _validate_dossier_document(document, dossier_id, file_name)
+        validate_dossier_document(document, dossier_id, file_name)
         dossiers.append(
             {
                 "id": document["id"],
@@ -450,7 +467,7 @@ def _load_dossiers():
     return dossiers
 
 
-def _validate_dossier_document(document, dossier_id, file_name):
+def validate_dossier_document(document, dossier_id, file_name):
     if not isinstance(document, dict):
         raise ValueError(f"Dossier must be a JSON object: {file_name}")
     if set(document) != DOSSIER_FIELDS:
