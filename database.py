@@ -97,10 +97,11 @@ def _column_names(connection, table_name):
 
 
 def apply_schema_updates(connection):
-    """Add authentication and session columns to older databases."""
+    """Add account lifecycle and session columns to older databases."""
     changed = False
     if _table_exists(connection, "users"):
-        if "is_blocked" not in _column_names(connection, "users"):
+        user_columns = _column_names(connection, "users")
+        if "is_blocked" not in user_columns:
             connection.execute(
                 """
                 ALTER TABLE users
@@ -108,6 +109,9 @@ def apply_schema_updates(connection):
                 CHECK (is_blocked IN (0, 1))
                 """
             )
+            changed = True
+        if "deleted_at" not in user_columns:
+            connection.execute("ALTER TABLE users ADD COLUMN deleted_at TEXT")
             changed = True
     if _table_exists(connection, "sessions"):
         session_columns = _column_names(connection, "sessions")

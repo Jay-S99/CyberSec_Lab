@@ -4,6 +4,7 @@
 -- password hashes, session tokens, or other authentication secrets.
 -- is_blocked distinguishes an explicitly blocked account from one that is only
 -- waiting for its first temporary credential.
+-- deleted_at removes an account from use while preserving ownership and audit history.
 -- sessions.credential_kind records whether the session used a temporary credential.
 -- sessions store a SHA-256 digest of the session identifier, never the identifier.
 
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     password_changed_at TEXT,
+    deleted_at TEXT,
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
 );
 
