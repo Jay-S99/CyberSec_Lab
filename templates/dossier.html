@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ dossier.id }} - DoomVault{% endblock %}
+{% block content %}
+<h1>{{ dossier.id }}: {{ dossier.title }}</h1>
+<p>{{ dossier.organization }} / {{ dossier.classification }} / {{ dossier.status }}</p>
+<h2>{{ dossier.incident.location }}</h2>
+<p>Threat level: {{ dossier.incident.threat_level }}</p>
+<p>{{ dossier.incident.summary }}</p>
+<ul>
+{% for observation in dossier.incident.observations %}
+  <li>{{ observation }}</li>
+{% endfor %}
+</ul>
+<p>{{ dossier.incident.conclusion }}</p>
+<p><a href="{{ url_for('dossiers.index') }}">Return to authorized dossiers</a></p>
+{% endblock %}

@@ -1,6 +1,6 @@
 # Session management
 
-Task2.1 extends the Task1.2 server-side sessions without replacing the Flask factory, SQLite helpers, password policy, provisioning, or CSRF protection. Full RBAC enforcement will be implemented in Task2.2.
+Task2.1 extends the Task1.2 server-side sessions without replacing the Flask factory, SQLite helpers, password policy, provisioning, or CSRF protection. Task2.2 adds backend RBAC and resource checks after this session boundary; see [authorization.md](authorization.md).
 
 ## Creation and identity
 
@@ -103,4 +103,4 @@ Use a local development database and a development-only account:
 
 Sessions are bearer credentials. Transport security, HttpOnly cookies, short inactivity windows, rotation, and revocation reduce hijacking risk, but a stolen live identifier can still be replayed until invalidated. IP/device binding, anomaly detection, periodic identifier rotation, and a separate absolute lifetime are not implemented. Account changes made directly in SQL are detected on the next application validation; future administrator workflows should revoke sessions atomically with the account update.
 
-Task2.2 will implement full RBAC authorization and resource permission checks. Administrator, session-management, dossier, and settings interfaces, localization switching, and additional authentication factors remain outside Task2.1.
+Task2.2 implements backend RBAC, resource permission checks, read-only dossier pages, and an administrative landing page. Full administration, session-management, dossier editing, settings interfaces, localization switching, and additional authentication factors remain deferred.

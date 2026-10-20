@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Dossiers - DoomVault{% endblock %}
+{% block content %}
+<h1>Authorized Dossiers</h1>
+<ul>
+{% for dossier in dossiers %}
+  <li><a href="{{ url_for('dossiers.detail', dossier_id=dossier.id) }}">{{ dossier.id }}: {{ dossier.title }}</a> — {{ dossier.classification }} / {{ dossier.status }}</li>
+{% else %}
+  <li>No dossiers are available for your current clearance.</li>
+{% endfor %}
+</ul>
+<p><a href="{{ url_for('auth.home') }}">Return to DoomVault</a></p>
+{% endblock %}

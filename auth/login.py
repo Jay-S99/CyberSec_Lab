@@ -1,8 +1,10 @@
 import hashlib
 import sqlite3
 from datetime import timedelta
+from functools import wraps
 
 from flask import (
+    abort,
     Blueprint,
     current_app,
     g,
@@ -49,6 +51,10 @@ from auth.temp_passwords import (
 from database import format_utc, get_db, immediate_transaction, utc_now
 from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
 from security.security_log import record_session_event
+from security.responses import (
+    authentication_required_response,
+    wants_json_response,
+)
 
 
 bp = Blueprint("auth", __name__)
@@ -105,12 +111,27 @@ def enforce_access_boundary():
     if request.endpoint is None or request.endpoint in _PUBLIC_ENDPOINTS:
         return None
     if g.user is None:
+        if wants_json_response():
+            return authentication_required_response()
         if g.get("session_expired"):
             return redirect(url_for("auth.login", notice="session-expired"))
         return redirect(url_for("auth.login"))
     if g.password_change_required and request.endpoint not in _SETUP_ENDPOINTS:
+        if wants_json_response():
+            abort(403)
         return redirect(url_for("auth.change_password"))
     return None
+
+
+def require_login(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        response = enforce_access_boundary()
+        if response is not None:
+            return response
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def finalize_response(response):

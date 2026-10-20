@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, and Task2.1 session lifecycle security are implemented. Full RBAC enforcement belongs to Task2.2. Dossier access is still planned. The database, permission catalog, and fictional dossier collection from the previous phase remain in place.
+Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, and Task2.2 backend authorization are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Dossier editing and administration workflows remain planned.
 
 ## Technology stack
 
@@ -31,7 +31,7 @@ Implemented:
 - Flask application factory and `GET /health`
 - SQLite database stored under `instance/`, with foreign keys enforced on every connection
 - Repeatable `init-db` and `seed-db` commands
-- Five roles, twelve permissions, and the least-privilege role mapping
+- Five roles, thirteen permissions, and an explicit least-privilege role mapping
 - Eight user records, including the permanent `ADMIN` identity, with no passwords until provisioning
 - Variant 10 security settings and the forbidden-word dictionary
 - Eight fictional dossier JSON files and matching dossier metadata
@@ -45,11 +45,17 @@ Implemented:
 - Session identifier rotation after password changes and invalidation after provisioning
 - Live account-status and privilege-context checks, secure cookies, and session events
 - Expiration feedback and a CSRF-protected POST logout action
+- Database-backed permission checks and reusable login/permission decorators
+- Ownership policies for dossier editing/submission and private incident reading
+- Read-only dossier detail and filtered archive endpoints
+- Classification and lifecycle checks, with additional DOOM_LEVEL permission
+- A protected administrative landing page and consistent HTML/JSON denial responses
+- Authorization failure events and isolated authorization regression tests
 
 Not implemented yet:
 
-- Authorization checks on requests
-- Dossier viewing, editing, and the administrator interface
+- Dossier creation, editing, submission, approval, and declassification workflows
+- Incident submission and reading interfaces
 - Management screens for accounts, settings, and the forbidden-word dictionary
 - Advanced session administration
 - Page design beyond the authentication forms, and the language switcher
@@ -112,7 +118,7 @@ flask --app app init-db
 flask --app app seed-db
 ```
 
-Both commands are safe to run again. `init-db` creates missing tables and indexes and does not delete existing rows. `seed-db` inserts missing catalog data and does not overwrite existing accounts, passwords, role assignments, settings, or dictionary entries.
+Both commands are safe to run again. `init-db` creates missing tables and indexes and upgrades the legacy permission/status constraints while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants.
 
 The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
 
@@ -136,9 +142,21 @@ The command prints the temporary password once in that terminal. It is not store
 
 Session identifiers contain 256 random bits; only their SHA-256 hashes are stored. Authentication cookies remain HttpOnly, SameSite=Strict, and host-only, with path `/`. HTTPS requests use Secure cookies. Set `DOOMVAULT_ENV=production` before starting a production process to require Secure authentication and CSRF cookies even behind TLS termination. Local HTTP development remains available with the default environment. Production must be served over HTTPS.
 
-Password changes revoke existing sessions and issue a new identifier. Provisioning revokes all existing sessions. Blocked or inactive accounts are rejected during validation; a changed role requires fresh authentication without implementing role permission checks.
+Password changes revoke existing sessions and issue a new identifier. Provisioning revokes all existing sessions. Blocked or inactive accounts are rejected during validation; a changed role requires fresh authentication. Permission changes within the same role take effect on subsequent requests without replacing the session.
 
 See [docs/session_management.md](docs/session_management.md) for lifecycle semantics, configuration, reusable operations, security tests, and manual verification.
+
+## Authorization (Task2.2)
+
+`GET /dossiers` lists only authorized metadata. `GET /dossiers/DV-001` displays a permitted document; send `Accept: application/json` to retrieve JSON. `GET /admin` requires `users.manage`. All decisions run on the backend, including direct URL requests.
+
+Readers can view only dossiers whose classification and status are both `DECLASSIFIED`. Managers can view classified dossiers in `PENDING`, legacy `SUBMITTED`, or `APPROVED` states. Editors can view their own non-DOOM_LEVEL `DRAFT` and `REJECTED` dossiers. DOOM_LEVEL additionally requires `dossiers.read_doom_level` and never bypasses lifecycle restrictions. Administrators receive no implicit dossier permissions. The seeded ownerless `DV-008` draft stays inaccessible.
+
+Unauthenticated browser requests redirect to login; JSON requests receive HTTP 401. Authenticated denials return HTTP 403 with a generic response and one sanitized security event. Missing or invalid dossier/file references return HTTP 404. JSON files remain outside static storage and are opened only after authorization.
+
+For an existing Task2.1 database, run `flask --app app init-db` followed by `flask --app app seed-db` before using the new endpoints. The development database is not migrated by the test suite.
+
+See [docs/rbac.md](docs/rbac.md) for all thirteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
 
 ## Running tests
 
@@ -148,7 +166,7 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies.
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. The symbolic-link test is skipped on hosts that do not permit creating links.
 
 ## Project structure
 
@@ -162,25 +180,27 @@ docs/authentication.md  Password policy, provisioning, login, and sessions
 docs/session_management.md  Task2.1 session lifecycle, configuration, and verification
 docs/database.md        Schema, settings, and dossier storage
 docs/rbac.md            Roles and permission matrix
+docs/authorization.md   Task2.2 policy, protected endpoints, and verification
+docs/task2.2-report.md  Task2.2 delivery report and validation results
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
 auth/                   Password hashing, policy, login, and sessions
-security/               CSRF protection and session security logging
-modules/                Future administrator and dossier features
+security/               CSRF, authorization policies, error responses, security logging
+modules/                Protected administrative landing page and read-only dossiers
 locales/                Reserved for future English and Polish translations
-templates/              Login, password change, and landing page
+templates/              Authentication, archive/detail, administration, and 403 pages
 static/                 Stylesheet for the authentication pages
 tests/                  Automated tests
 instance/               Local runtime data; database files are not committed
 ```
 
-Authorization modules under `security/` and `modules/` remain empty. Task2.2 will enforce role permissions. Message codes for a future Polish catalog live in `auth/messages.py`.
+Authorization helpers under `security/` are reusable by future workflow endpoints. Message codes for a future Polish catalog live in `auth/messages.py`; language switching remains deferred.
 
 ## Planned features
 
-- Request authorization based on the role and permission catalog
-- Classified dossier browsing and incident submission
+- Dossier authoring, review, and declassification workflows
+- Incident submission and private report interfaces
 - An administrator interface for accounts, blocked users, and security settings
 - Advanced session administration
 - A lightweight translation layer with English as the default language and Polish as a second language

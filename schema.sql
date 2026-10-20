@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS permissions (
             'security.manage',
             'dossiers.read_declassified',
             'dossiers.read_classified',
+            'dossiers.read_doom_level',
             'dossiers.read_own_drafts',
             'dossiers.create',
             'dossiers.edit_own',
@@ -122,7 +123,9 @@ CREATE TABLE IF NOT EXISTS dossiers (
         )
     ),
     status TEXT NOT NULL CHECK (
-        status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'DECLASSIFIED')
+        status IN (
+            'DRAFT', 'PENDING', 'SUBMITTED', 'APPROVED', 'REJECTED', 'DECLASSIFIED'
+        )
     ),
     file_name TEXT NOT NULL UNIQUE CHECK (file_name = id || '.json'),
     created_by INTEGER,

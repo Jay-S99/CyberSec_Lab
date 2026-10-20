@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 
@@ -180,6 +181,78 @@ def init_db():
     with open(SCHEMA_PATH, encoding="utf-8") as schema_file:
         schema_sql = schema_file.read()
     connection.executescript(schema_sql)
+    _upgrade_authorization_schema(connection, schema_sql)
+
+
+def _upgrade_authorization_schema(connection, schema_sql):
+    tables = []
+    for table_name, required_value in (
+        ("permissions", "dossiers.read_doom_level"),
+        ("dossiers", "PENDING"),
+    ):
+        row = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (table_name,),
+        ).fetchone()
+        if required_value not in row["sql"]:
+            tables.append(table_name)
+    if not tables:
+        return
+    if connection.in_transaction:
+        raise RuntimeError("Schema updates require a separate transaction.")
+    connection.execute("PRAGMA foreign_keys = OFF")
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        for table_name in tables:
+            definition = re.search(
+                rf"CREATE TABLE IF NOT EXISTS {table_name} \([\s\S]+?\n\);",
+                schema_sql,
+            ).group()
+            temporary_name = f"authorization_{table_name}"
+            connection.execute(definition.replace(
+                f"CREATE TABLE IF NOT EXISTS {table_name}",
+                f"CREATE TABLE {temporary_name}",
+                1,
+            ))
+            old_columns = [
+                row["name"]
+                for row in connection.execute(f"PRAGMA table_info({table_name})")
+            ]
+            new_columns = [
+                row["name"]
+                for row in connection.execute(
+                    f"PRAGMA table_info({temporary_name})"
+                )
+            ]
+            if old_columns != new_columns:
+                raise RuntimeError("Unexpected authorization schema columns.")
+            dependent_sql = [
+                row["sql"] for row in connection.execute(
+                    """
+                    SELECT sql FROM sqlite_master
+                    WHERE tbl_name = ? AND type IN ('index', 'trigger')
+                      AND sql IS NOT NULL
+                    """,
+                    (table_name,),
+                )
+            ]
+            connection.execute(
+                f"INSERT INTO {temporary_name} SELECT * FROM {table_name}"
+            )
+            connection.execute(f"DROP TABLE {table_name}")
+            connection.execute(
+                f"ALTER TABLE {temporary_name} RENAME TO {table_name}"
+            )
+            for statement in dependent_sql:
+                connection.execute(statement)
+        if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise RuntimeError("Foreign key validation failed after schema update.")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.execute("PRAGMA foreign_keys = ON")
 
 
 @click.command("init-db")

@@ -1,6 +1,6 @@
 # Authentication
 
-DoomVault authenticates people with Argon2id password hashes, one-time temporary credentials, and server-side sessions. Task2.1 hardens the session lifecycle. Full RBAC enforcement belongs to Task2.2; session administration screens remain planned.
+DoomVault authenticates people with Argon2id password hashes, one-time temporary credentials, and server-side sessions. Task2.1 hardens the session lifecycle. Task2.2 adds backend RBAC and resource authorization, documented in [authorization.md](authorization.md); session administration screens remain planned.
 
 ## Password storage
 
@@ -62,7 +62,7 @@ Application requests validate the session centrally against the current account 
 
 `credential_kind` is `temporary` or `password`. The application does not trust a role or a signed-in flag sent by the browser. Logout is `POST /logout`. It revokes the current session and clears the cookie. Login, logout, and password change require a CSRF token stored in the `doomvault_csrf` cookie and submitted with the form.
 
-The authenticated landing page states that a session exists. It does not open dossiers.
+The authenticated landing page confirms the session and links to the filtered dossier archive. Task2.2 checks permissions and resource policy before returning any dossier metadata or content.
 
 ## Manual check
 
