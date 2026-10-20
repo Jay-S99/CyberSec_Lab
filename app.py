@@ -6,6 +6,9 @@ from auth.login import init_app as init_login
 from auth.temp_passwords import init_app as init_provisioning
 from config import Config
 from database import init_app as init_database
+from modules.admin import bp as admin_blueprint
+from modules.dossiers import bp as dossiers_blueprint
+from security.errors import init_app as init_errors
 from seed import init_app as init_seed
 
 
@@ -19,6 +22,9 @@ def create_app(config_class=Config):
     init_seed(application)
     init_login(application)
     init_provisioning(application)
+    application.register_blueprint(admin_blueprint)
+    application.register_blueprint(dossiers_blueprint)
+    init_errors(application)
 
     @application.get("/health")
     def health():
