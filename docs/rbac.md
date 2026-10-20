@@ -12,7 +12,7 @@ Each role receives only the permissions required for its responsibilities.
 - The employee submits and reads the employee's own incident reports, and can read declassified dossiers.
 - The reader can read declassified dossiers and has no editing, review, or administration rights.
 
-Permissions whose names end in `_own` require a later ownership check against the specific dossier or incident. Assigning the editor role is not evidence that every draft belongs to that user. `DOOM_LEVEL` is a dossier classification, not a role, and it grants no access.
+Ownership permissions require a backend check against the resource's `created_by` field and the validated session identity. Assigning the editor role is not evidence that every draft belongs to that user. `DOOM_LEVEL` is a classification, not a role, and requires an additional explicit permission.
 
 Seed records are not authenticated users. An inactive row with a null password hash cannot be treated as a logged-in session.
 
@@ -24,6 +24,7 @@ Seed records are not authenticated users. An inactive row with a null password h
 | `security.manage` | Yes | No | No | No | No |
 | `dossiers.read_declassified` | No | Yes | Yes | Yes | Yes |
 | `dossiers.read_classified` | No | Yes | No | No | No |
+| `dossiers.read_doom_level` | No | Yes | No | No | No |
 | `dossiers.read_own_drafts` | No | No | Yes | No | No |
 | `dossiers.create` | No | No | Yes | No | No |
 | `dossiers.edit_own` | No | No | Yes | No | No |
@@ -62,4 +63,30 @@ Every seeded account is inactive, has `password_hash` set to null, has `must_cha
 
 ## Account provisioning
 
-`flask --app app provision-user USERNAME` issues a temporary password for an existing row. It does not create users and it does not assign roles. The authentication flow, the variant 10 password rules, and session handling are documented in [authentication.md](authentication.md). A role grant still does not authenticate the person, and this phase does not enforce the permission matrix on requests.
+`flask --app app provision-user USERNAME` issues a temporary password for an existing row. It does not create users and it does not assign roles. The authentication flow, the variant 10 password rules, and session handling are documented in [authentication.md](authentication.md). Task2.2 enforces permissions from SQLite after session validation.
+
+## Permission purposes
+
+- `users.manage`: enter the user administration area; future account and role operations.
+- `security.manage`: future security settings operations; reusable decorator available, with no settings interface in Task2.2.
+- `dossiers.read_declassified`: read dossiers with both classification and status `DECLASSIFIED`.
+- `dossiers.read_classified`: read `INTERNAL`, `SECRET`, and `TOP_SECRET` dossiers in `PENDING`, legacy `SUBMITTED`, or `APPROVED` states.
+- `dossiers.read_doom_level`: an additional gate for DOOM_LEVEL content; also requires classified reading and a permitted review state.
+- `dossiers.read_own_drafts`: read owned non-DOOM_LEVEL classified drafts and rejected working copies.
+- `dossiers.create`: future creation of dossier drafts.
+- `dossiers.edit_own`: authorize editing an owned working dossier through `can_edit_dossier`; no editing endpoint yet.
+- `dossiers.submit_own`: authorize submission of an owned working dossier through `can_submit_dossier`; no submission endpoint yet.
+- `dossiers.review`: future approval or rejection of submitted dossiers.
+- `dossiers.declassify`: future declassification of approved dossiers.
+- `incidents.create`: future incident reporting.
+- `incidents.read_own`: authorize reading an owned report through `can_view_incident`; no report interface yet.
+
+There is no role inheritance, wildcard grant, username exception, or administrator bypass. Explicit dossier grants could be assigned to an administrator in SQLite, but administrative authority alone never grants intelligence access.
+
+## Runtime policy and seeding
+
+`get_user_permissions()` resolves the authenticated user's current role and explicit grants from SQLite. `has_permission()` denies unknown permissions, missing/invalid roles, unavailable permission data, and inactive or blocked accounts. The session boundary requires password setup before protected access. Client cookies and parameters never supply authoritative permissions.
+
+The matrix describes initial grants. Seeding initializes grants for newly inserted roles or permissions, including the manager-only DOOM_LEVEL grant during upgrade. It does not restore manually removed grants for existing roles and permissions, and it preserves custom grants. Removing a permission applies on the next request using the same session; changing the user's role retains Task2.1's reauthentication requirement.
+
+Classification, ownership, lifecycle rules, secure file retrieval, and verification instructions are in [authorization.md](authorization.md).
