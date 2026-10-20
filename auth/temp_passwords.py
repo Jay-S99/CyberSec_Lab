@@ -124,56 +124,87 @@ def provision_account(connection, username, now=None):
     with immediate_transaction(connection):
         user = connection.execute(
             """
-            SELECT id, username, is_blocked
+            SELECT id, username, is_blocked, deleted_at
             FROM users
             WHERE username = ?
             """,
             (requested,),
         ).fetchone()
-        if user is None:
+        if user is None or user["deleted_at"] is not None:
             raise ProvisioningError("Account not found.")
         if user["is_blocked"]:
             raise ProvisioningError("Blocked accounts cannot be provisioned.")
-        plaintext = generate_temporary_password()
-        password_hash = hash_password(plaintext)
+        result = issue_temporary_credential(connection, user, now)
+    return result
+
+
+def issue_temporary_credential(connection, user, now, *, reset=False, hours=None):
+    """Issue a credential inside the caller's account-management transaction."""
+    if not connection.in_transaction:
+        raise RuntimeError("Credential issuance requires a transaction.")
+    current = connection.execute(
+        """
+        SELECT id, username, is_active, is_blocked, password_hash, deleted_at
+        FROM users WHERE id = ?
+        """,
+        (user["id"],),
+    ).fetchone()
+    if current is None or current["deleted_at"] is not None:
+        raise ProvisioningError("Account not found.")
+    if current["is_blocked"] and not reset:
+        raise ProvisioningError("Blocked accounts cannot be provisioned.")
+    if hours is None:
         hours = temporary_password_hours(connection)
-        expires = expiration_deadline(now, hours)
-        stamp = format_utc(now)
-        expires_stamp = format_utc(expires)
+    if type(hours) is not int or hours <= 0:
+        raise ValueError("Temporary credential validity must be positive hours.")
+    plaintext = generate_temporary_password()
+    password_hash = hash_password(plaintext)
+    stamp = format_utc(now)
+    expires_stamp = format_utc(expiration_deadline(now, hours))
+    if reset and current["password_hash"]:
         connection.execute(
             """
-            UPDATE temporary_passwords
-            SET used_at = ?
-            WHERE user_id = ? AND used_at IS NULL
+            INSERT INTO password_history (user_id, password_hash, created_at)
+            SELECT ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM password_history
+                WHERE user_id = ? AND password_hash = ?
+            )
             """,
-            (stamp, user["id"]),
+            (
+                current["id"], current["password_hash"], stamp,
+                current["id"], current["password_hash"],
+            ),
         )
-        connection.execute(
-            """
-            INSERT INTO temporary_passwords (
-                user_id,
-                password_hash,
-                created_at,
-                expires_at,
-                used_at
-            ) VALUES (?, ?, ?, ?, NULL)
-            """,
-            (user["id"], password_hash, stamp, expires_stamp),
-        )
-        cursor = connection.execute(
-            """
-            UPDATE users
-            SET is_active = 1,
-                must_change_password = 1,
-                updated_at = ?
-            WHERE id = ? AND is_blocked = 0
-            """,
-            (stamp, user["id"]),
-        )
-        if cursor.rowcount != 1:
-            raise ProvisioningError("Blocked accounts cannot be provisioned.")
-        revoke_all_sessions(connection, user["id"], now)
-    return user["username"], plaintext, expires_stamp
+    connection.execute(
+        """
+        UPDATE temporary_passwords
+        SET used_at = ?
+        WHERE user_id = ? AND used_at IS NULL
+        """,
+        (stamp, current["id"]),
+    )
+    connection.execute(
+        """
+        INSERT INTO temporary_passwords (
+            user_id, password_hash, created_at, expires_at, used_at
+        ) VALUES (?, ?, ?, ?, NULL)
+        """,
+        (current["id"], password_hash, stamp, expires_stamp),
+    )
+    connection.execute(
+        """
+        UPDATE users
+        SET is_active = CASE WHEN is_blocked = 0 THEN 1 ELSE is_active END,
+            password_hash = CASE WHEN ? THEN NULL ELSE password_hash END,
+            must_change_password = 1,
+            updated_at = ?
+        WHERE id = ? AND deleted_at IS NULL
+        """,
+        (int(reset), stamp, current["id"]),
+    )
+    revoke_all_sessions(connection, current["id"], now)
+    return current["username"], plaintext, expires_stamp
 
 
 @click.command("provision-user")
