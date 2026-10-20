@@ -259,6 +259,7 @@ def authenticate(connection, username, password, now):
         user is not None
         and user["is_active"] == 1
         and user["is_blocked"] == 0
+        and user["deleted_at"] is None
     )
     if allowed and permanent_ok:
         replacement = None
@@ -312,6 +313,7 @@ def open_authenticated_session(connection, result, now):
             current_user is None
             or current_user["is_active"] != 1
             or current_user["is_blocked"] != 0
+            or current_user["deleted_at"] is not None
             or (
                 result.credential_kind == "password"
                 and current_user["password_hash"] != result.verified_hash
@@ -625,7 +627,8 @@ def _find_user(connection, username):
             is_active,
             is_blocked,
             must_change_password,
-            password_changed_at
+            password_changed_at,
+            deleted_at
         FROM users
         WHERE username = ?
         """,
@@ -644,7 +647,8 @@ def _user_by_id(connection, user_id):
             is_active,
             is_blocked,
             must_change_password,
-            password_changed_at
+            password_changed_at,
+            deleted_at
         FROM users
         WHERE id = ?
         """,
