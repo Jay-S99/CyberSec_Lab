@@ -6,7 +6,7 @@
   <title>{% block title %}DoomVault{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <main>
     {% block content %}{% endblock %}
   </main>

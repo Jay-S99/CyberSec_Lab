@@ -78,3 +78,21 @@ a {
   outline: 3px solid #0b3a82;
   outline-offset: 2px;
 }
+
+.access-denied {
+  color: #ececec;
+  background: #111318;
+}
+
+.access-denied main {
+  background: #1c1f26;
+  border-color: #813b43;
+}
+
+.access-denied h1 {
+  color: #f0939d;
+}
+
+.access-denied a {
+  color: #b7d2ff;
+}
