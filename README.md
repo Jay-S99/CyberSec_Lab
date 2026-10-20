@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, and Task2.2 backend authorization are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Dossier editing and administration workflows remain planned.
+Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, and Task3.1 user management are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Administrators can manage account lifecycles through a protected interface. Dossier editing and security policy management remain planned.
 
 ## Technology stack
 
@@ -39,7 +39,7 @@ Implemented:
 - Variant 10 password policy, password history, and password expiration
 - One-time temporary passwords and the local `provision-user` command
 - Login, mandatory first-password setup, and authenticated password change
-- Server-side sessions and CSRF protection for authentication forms
+- Server-side sessions and CSRF protection for authentication and administrative forms
 - Configurable server-side inactivity expiration and authenticated activity tracking
 - Current, all-user, and other-session revocation helpers
 - Session identifier rotation after password changes and invalidation after provisioning
@@ -49,16 +49,23 @@ Implemented:
 - Ownership policies for dossier editing/submission and private incident reading
 - Read-only dossier detail and filtered archive endpoints
 - Classification and lifecycle checks, with additional DOOM_LEVEL permission
-- A protected administrative landing page and consistent HTML/JSON denial responses
+- A protected administrator dashboard with live account counts
+- User listing, username search, role/status filters, account creation, and editing
+- Validated role assignment and pending account provisioning
+- Account blocking/unblocking and soft deletion that preserves historical references
+- Administrator password resets with one-time, 12-hour temporary credentials
+- Permanent ADMIN, self-protection, and last usable administrator safeguards
+- Atomic account changes, session revocation, and sanitized administrative events
+- Consistent HTML/JSON denial responses
 - Authorization failure events and isolated authorization regression tests
 
 Not implemented yet:
 
 - Dossier creation, editing, submission, approval, and declassification workflows
 - Incident submission and reading interfaces
-- Management screens for accounts, settings, and the forbidden-word dictionary
+- Management screens for security settings and the forbidden-word dictionary (Task3.2)
 - Advanced session administration
-- Page design beyond the authentication forms, and the language switcher
+- Advanced page design and the language switcher
 
 ## Requirements
 
@@ -118,7 +125,7 @@ flask --app app init-db
 flask --app app seed-db
 ```
 
-Both commands are safe to run again. `init-db` creates missing tables and indexes and upgrades the legacy permission/status constraints while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants.
+Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades the legacy permission/status constraints, and adds the nullable `users.deleted_at` column for Task3.1 while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants.
 
 The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
 
@@ -158,6 +165,22 @@ For an existing Task2.1 database, run `flask --app app init-db` followed by `fla
 
 See [docs/rbac.md](docs/rbac.md) for all thirteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
 
+## User management (Task3.1)
+
+Open `/admin` after signing in with a fully established account that has `users.manage`. The initial role mapping grants this permission only to administrators. Every administrative route checks it on the backend; neither the username `ADMIN` nor a visible navigation link grants access. Unauthenticated browser requests redirect to login, and authenticated users without permission receive HTTP 403.
+
+The dashboard shows total, active, pending-provisioning, and blocked account counts. `/admin/users` lists non-deleted accounts with username, role, status, and creation date, and supports username search and role/status filters. Creation validates case-insensitive username uniqueness and a database-backed role selection. A new account remains pending until provisioned; the creation form can generate its first temporary credential immediately.
+
+Provisioning and administrator password resets reuse the existing three-random-word/two-digit generator and Argon2id hashing. Temporary credentials last 12 hours, require a new permanent password at sign-in, and appear only in the immediate POST response with no-store headers. Plaintext is never placed in a URL, flash message, stored session, database record, or log. Previous temporary credentials and existing sessions are invalidated. Resetting a blocked account leaves it blocked.
+
+Username and role changes, blocking, and deletion revoke existing sessions in the account-change transaction. Blocking preserves the underlying provisioning state; unblocking does not create credentials or extend their expiry. Soft deletion sets `deleted_at`, disables access, and preserves account IDs, password history, dossier ownership, and audit references. Deleted usernames remain reserved, and deleted accounts cannot be restored through the interface.
+
+The permanent ADMIN identity cannot be renamed, demoted, blocked, or deleted. Administrators cannot remove their own administrative role, block themselves, or delete themselves. Operations also protect the last usable administrator, checking current account and credential state under the same database write lock as the change. Administrative events identify the actor and target account IDs without authentication secrets.
+
+Run `flask --app app init-db` against an existing database before using Task3.1. The upgrade preserves accounts and does not require dropping or recreating the database. See [docs/user_management.md](docs/user_management.md) for endpoint behavior, lifecycle rules, safeguards, tests, and a disposable-account manual walkthrough. Security policy management remains deferred to Task3.2.
+
+The [Task3.1 delivery report](docs/task3.1-report.md) lists the changed files, delivered functionality, validation, and remaining limits.
+
 ## Running tests
 
 From the repository root, with the virtual environment activated:
@@ -166,7 +189,7 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. The symbolic-link test is skipped on hosts that do not permit creating links.
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. The symbolic-link test is skipped on hosts that do not permit creating links.
 
 ## Project structure
 
@@ -182,15 +205,16 @@ docs/database.md        Schema, settings, and dossier storage
 docs/rbac.md            Roles and permission matrix
 docs/authorization.md   Task2.2 policy, protected endpoints, and verification
 docs/task2.2-report.md  Task2.2 delivery report and validation results
+docs/user_management.md Task3.1 account lifecycle, administrator interface, and verification
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
 auth/                   Password hashing, policy, login, and sessions
 security/               CSRF, authorization policies, error responses, security logging
-modules/                Protected administrative landing page and read-only dossiers
+modules/                Protected user-management routes and read-only dossiers
 locales/                Reserved for future English and Polish translations
-templates/              Authentication, archive/detail, administration, and 403 pages
-static/                 Stylesheet for the authentication pages
+templates/              Authentication, archive/detail, user administration, and 403 pages
+static/                 Shared authentication and administration stylesheet
 tests/                  Automated tests
 instance/               Local runtime data; database files are not committed
 ```
@@ -201,7 +225,7 @@ Authorization helpers under `security/` are reusable by future workflow endpoint
 
 - Dossier authoring, review, and declassification workflows
 - Incident submission and private report interfaces
-- An administrator interface for accounts, blocked users, and security settings
+- Security policy, password validity, and forbidden-word dictionary management (Task3.2)
 - Advanced session administration
 - A lightweight translation layer with English as the default language and Polish as a second language
 
