@@ -8,7 +8,7 @@ The default database path is `instance/doomvault.db`. Set `DOOMVAULT_DATABASE` t
 
 `flask --app app init-db` creates missing tables and indexes and applies the supported legacy schema updates without deleting existing rows. Task2.2 rebuilds the legacy permission/status tables transactionally to extend their CHECK constraints, preserving primary keys, references, data, indexes, and triggers.
 
-`flask --app app seed-db` requires those tables. It inserts missing catalog data, accounts, settings, forbidden words, and dossier metadata without replacing existing rows. Default grants are added only for new roles or permissions. Manually removed role-permission grants stay removed on subsequent runs, and custom grants are kept. Other removed default catalog rows are inserted again. Existing account assignments, settings, and custom dictionary entries are preserved.
+`flask --app app seed-db` requires those tables. It inserts missing catalog data, accounts, settings, the initial forbidden-word dictionary, and dossier metadata without replacing existing rows. Default grants are added only for new roles or permissions. Manually removed role-permission grants stay removed on subsequent runs, and custom grants are kept. Other removed default catalog rows are inserted again. Existing account assignments and settings are preserved. After its one-time installation marker is stored, the forbidden-word dictionary is fully administrator-managed: additions, edits, deletions, and an intentionally empty dictionary survive subsequent seed runs.
 
 ## Connections
 
@@ -72,6 +72,8 @@ One row per configuration key. Values are text. Integer settings use decimal tex
 | `password_history_limit` | `5` | Number of previous hashes to reject for reuse |
 | `session_inactivity_timeout_minutes` | `15` | Inactivity window applied to a session |
 | `password_validity_days` | `0` | `0` disables periodic password expiration |
+
+The internal `forbidden_words_seed_version` marker records completion of initial dictionary seeding. It is not an administrator-configurable policy. Once present, repeated seeding never recreates dictionary entries that an administrator deleted.
 
 A value of `0` for password validity means permanent passwords do not expire on a schedule until that value is raised. There is no settings screen yet. Temporary passwords use three randomly selected words followed by two digits.
 

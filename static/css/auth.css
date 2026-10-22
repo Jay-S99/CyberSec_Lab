@@ -356,9 +356,74 @@ a {
   user-select: all;
 }
 
+.admin-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-policy-card,
+.admin-readonly {
+  padding: 1.25rem;
+  border: 1px solid #d0d0d0;
+  background: #f7f7f5;
+}
+
+.admin-policy-card h2,
+.admin-readonly h2 {
+  font-size: 1.25rem;
+}
+
+.admin-readonly,
+.admin-add-word {
+  margin: 1.5rem 0;
+}
+
+.admin-field-error {
+  margin: 0.5rem 0 0;
+  color: #8a1f1f;
+  font-weight: 600;
+}
+
+.admin-inline-edit {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.admin-inline-edit input {
+  min-width: 12rem;
+  margin: 0;
+}
+
+.admin-inline-edit button {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.admin-words-table {
+  min-width: 42rem;
+}
+
+.admin-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (max-width: 60rem) {
   .admin-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-policy-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import click
 from flask.cli import with_appcontext
 
+from auth.password_policy import normalize_forbidden_word
 from database import REQUIRED_TABLES, get_db
 
 
@@ -158,6 +159,7 @@ FORBIDDEN_WORDS = (
     "jesien",
     "zima",
 )
+FORBIDDEN_WORDS_SEED_MARKER = "forbidden_words_seed_version"
 
 DOSSIER_IDS = tuple(f"DV-{number:03d}" for number in range(1, 9))
 ORGANIZATIONS = frozenset({"SHIELD", "HYDRA", "SWORD", "UNKNOWN"})
@@ -182,20 +184,14 @@ def utc_timestamp():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def normalize_forbidden_word(word):
-    if not isinstance(word, str):
-        raise ValueError("A forbidden word must be text.")
-    normalized = word.strip().casefold()
-    if not normalized or any(character.isspace() for character in normalized):
-        raise ValueError("A forbidden word must be a single non-empty token.")
-    return normalized
-
-
 def seed_database():
     _validate_catalog()
     dossiers = _load_dossiers()
     connection = get_db()
     _require_schema(connection)
+    dictionary_was_initialized = _forbidden_dictionary_was_initialized(
+        connection
+    )
     timestamp = utc_timestamp()
     try:
         existing_roles = {
@@ -210,7 +206,9 @@ def seed_database():
         _seed_role_permissions(connection, existing_roles, existing_permissions)
         _seed_users(connection, timestamp)
         _seed_settings(connection)
-        _seed_forbidden_words(connection, timestamp)
+        _seed_forbidden_words(
+            connection, timestamp, dictionary_was_initialized
+        )
         _seed_dossiers(connection, dossiers, timestamp)
         connection.commit()
     except Exception:
@@ -366,7 +364,32 @@ def _seed_settings(connection):
         )
 
 
-def _seed_forbidden_words(connection, timestamp):
+def _forbidden_dictionary_was_initialized(connection):
+    return connection.execute(
+        """
+        SELECT 1 FROM settings
+        WHERE key IN (?, 'forbidden_words_enabled')
+        UNION ALL
+        SELECT 1 FROM forbidden_words
+        LIMIT 1
+        """,
+        (FORBIDDEN_WORDS_SEED_MARKER,),
+    ).fetchone() is not None
+
+
+def _seed_forbidden_words(connection, timestamp, already_initialized):
+    marker = connection.execute(
+        "SELECT 1 FROM settings WHERE key = ?",
+        (FORBIDDEN_WORDS_SEED_MARKER,),
+    ).fetchone()
+    if marker is not None:
+        return
+    if already_initialized:
+        connection.execute(
+            "INSERT INTO settings (key, value) VALUES (?, '1')",
+            (FORBIDDEN_WORDS_SEED_MARKER,),
+        )
+        return
     for word in FORBIDDEN_WORDS:
         normalized = normalize_forbidden_word(word)
         connection.execute(
@@ -379,6 +402,10 @@ def _seed_forbidden_words(connection, timestamp):
             """,
             (normalized, timestamp, normalized),
         )
+    connection.execute(
+        "INSERT INTO settings (key, value) VALUES (?, '1')",
+        (FORBIDDEN_WORDS_SEED_MARKER,),
+    )
 
 
 def _seed_dossiers(connection, dossiers, timestamp):

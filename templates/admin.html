@@ -10,5 +10,8 @@
   <div><dt>Blocked</dt><dd>{{ counts.blocked }}</dd></div>
 </dl>
 <p><a class="admin-button" href="{{ url_for('admin.users') }}">Manage users</a></p>
+{% if can_manage_security %}
+<p><a class="admin-button admin-secondary" href="{{ url_for('admin.security') }}">Manage security settings</a></p>
+{% endif %}
 <p class="admin-muted">Deleted accounts are excluded from these totals. Pending accounts need a valid temporary credential before their first sign-in.</p>
 {% endblock %}

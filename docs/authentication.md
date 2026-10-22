@@ -11,14 +11,14 @@ Permanent and temporary passwords are hashed with Argon2id through `argon2-cffi`
 Permanent passwords are checked against the `settings` and `forbidden_words` tables.
 
 - Minimum length comes from `minimum_password_length`. The seeded value is 14.
-- When `forbidden_words_enabled` is `true`, a password is rejected if it contains a dictionary word. Matching is case-insensitive and uses NFKC normalization plus casefold, including Polish characters. The password itself is not rewritten before hashing.
+- When `forbidden_words_enabled` is `true`, a password is rejected if it contains a dictionary word. Stored entries use NFKC plus casefold. Comparison additionally decomposes Unicode, removes combining marks, and maps Polish `ł` to `l`, making case, canonical Unicode forms, and accented/unaccented Polish spellings consistent. The password itself is not rewritten before hashing.
 - The current password and the previous hashes in `password_history` cannot be reused. Comparison uses Argon2id. `password_history_limit` defaults to 5.
 - A confirmation must match the new password.
 - The policy does not require uppercase letters, digits, or symbols.
 
 Validation returns message codes so a later Polish catalog can translate them. The interface currently renders the English catalog.
 
-`password_validity_days` controls periodic expiration. Zero, the seeded value, disables it. A positive value expires a permanent password that many days after `password_changed_at`. An expired password can still sign in, but DoomVault only allows the password-change page and logout until the password is replaced. Turning the setting back to zero removes that restriction. There is no settings screen in this phase; the value lives in `settings`.
+`password_validity_days` controls periodic expiration. Zero, the seeded value, disables it. An administrator can configure 0 through 3650 days at `/admin/security`. A positive value expires a permanent password that many days after `password_changed_at`. An expired password can still sign in, but DoomVault only allows the password-change page and logout until the password is replaced. Turning the setting back to zero removes that restriction.
 
 ## Temporary passwords
 

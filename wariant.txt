@@ -1,0 +1,97 @@
+Wariant zabezpieczeń nr.10
+flask --app app run --host 127.0.0.1 --port 5000
+
+TASK 3.2 - MAPA PLIKÓW
+
+Główna konfiguracja aplikacji
+- app.py
+  Tworzy aplikację Flask, rejestruje moduły i udostępnia w szablonach
+  informację, czy użytkownik może zarządzać kontami lub bezpieczeństwem.
+
+Baza danych i dane początkowe
+- database.py
+  Otwiera połączenia SQLite, włącza klucze obce, obsługuje transakcje
+  i inicjalizację schematu.
+- schema.sql
+  Definiuje tabele settings, forbidden_words, security_events, users,
+  sessions oraz pozostałe elementy bazy danych.
+- seed.py
+  Dodaje domyślne ustawienia bezpieczeństwa i początkowy słownik.
+  Znacznik forbidden_words_seed_version zapobiega ponownemu dodaniu słów,
+  które administrator usunął.
+
+Polityka haseł
+- auth/password_policy.py
+  Odczytuje bieżące ustawienia z SQLite i egzekwuje minimalną długość,
+  słownik zabronionych słów, historię oraz ważność hasła. Odpowiada też
+  za normalizację Unicode i porównywanie polskich znaków.
+- auth/passwords.py
+  Odpowiada za Argon2id, weryfikację hasła, zapis nowego skrótu i historię.
+- auth/login.py
+  Obsługuje logowanie i zmianę hasła. Korzysta z aktualnych ustawień
+  polityki oraz ogranicza dostęp użytkownika z wygasłym hasłem.
+- auth/temp_passwords.py
+  Generuje i zapisuje jednorazowe hasła tymczasowe. Ich maksymalna ważność
+  pozostaje ograniczona do 12 godzin.
+
+Sesje
+- auth/sessions.py
+  Tworzy, odnawia, wygasza i unieważnia sesje po stronie serwera.
+  Przy każdej walidacji odczytuje aktualny limit bezczynności z bazy.
+
+Autoryzacja, CSRF i audyt
+- security/permissions.py
+  Sprawdza uprawnienie security.manage i zwraca odmowę HTTP 403.
+- security/csrf.py
+  Weryfikuje tokeny CSRF dla wszystkich operacji zmieniających ustawienia.
+- security/security_log.py
+  Zapisuje zdarzenia zmian konfiguracji w tabeli security_events bez haseł,
+  tokenów sesji ani innych sekretów.
+
+Logika i trasy panelu administracyjnego
+- modules/security_settings.py
+  Zawiera logikę biznesową Task3.2: walidację zakresów, transakcyjną
+  aktualizację ustawień, ponowną kontrolę uprawnień, operacje CRUD słownika
+  i tworzenie zdarzeń audytowych.
+- modules/admin.py
+  Definiuje adresy /admin/security oraz /admin/security/forbidden-words,
+  przyjmuje formularze, wymaga security.manage i ochrony CSRF, a następnie
+  przekazuje operacje do modules/security_settings.py.
+
+Interfejs użytkownika
+- templates/admin/security.html
+  Formularze ustawień polityki haseł, ważności hasła i czasu bezczynności.
+- templates/admin/forbidden_words.html
+  Lista oraz formularze dodawania, edycji i usuwania zabronionych słów.
+- templates/admin/base.html
+  Wspólna nawigacja panelu administracyjnego.
+- templates/admin.html
+  Odnośnik z głównego panelu administratora do ustawień bezpieczeństwa.
+- templates/dashboard.html
+  Pokazuje odnośnik do ustawień użytkownikom z security.manage.
+- static/css/auth.css
+  Style panelu bezpieczeństwa, formularzy i responsywnej tabeli słownika.
+
+Testy
+- tests/test_security_settings.py
+  Testuje RBAC, CSRF, zakresy ustawień, słownik Unicode, XSS, wymuszanie
+  polityki haseł i sesji, audyt oraz odporność na mass assignment.
+- tests/test_seed.py
+  Testuje bezpieczne i powtarzalne ładowanie danych oraz zachowanie słów
+  usuniętych przez administratora.
+
+Dokumentacja
+- README.md
+  Opisuje stan projektu oraz funkcje ukończone w Task3.2.
+- docs/security_policies.md
+  Szczegółowo opisuje ustawienia, zakresy, bezpieczeństwo, audyt, testy
+  i procedurę ręcznej weryfikacji.
+- docs/authentication.md
+  Opisuje integrację ustawień z hasłami i ich ważnością.
+- docs/session_management.md
+  Opisuje konfigurowalny limit bezczynności sesji.
+- docs/database.md
+  Opisuje ustawienia i mechanizm jednorazowego zasiewania słownika.
+
+Uruchomienie testów
+python -m pytest -q

@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, and Task3.1 user management are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Administrators can manage account lifecycles through a protected interface. Dossier editing and security policy management remain planned.
+Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, and Task3.2 security policy management are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Authorized administrators can manage account lifecycles, password policy, the forbidden-word dictionary, password validity, and session inactivity through protected interfaces. Dossier editing remains planned for Task4.1.
 
 ## Technology stack
 
@@ -56,6 +56,11 @@ Implemented:
 - Administrator password resets with one-time, 12-hour temporary credentials
 - Permanent ADMIN, self-protection, and last usable administrator safeguards
 - Atomic account changes, session revocation, and sanitized administrative events
+- A protected security settings panel requiring `security.manage`
+- Administrator-controlled forbidden-word policy, minimum password length, password validity, and session inactivity timeout
+- Forbidden-word creation, editing, and deletion with Unicode-aware duplicate detection
+- Live integration of security settings with permanent-password and server-side session enforcement
+- Atomic security configuration changes with sanitized audit events
 - Consistent HTML/JSON denial responses
 - Authorization failure events and isolated authorization regression tests
 
@@ -63,7 +68,6 @@ Not implemented yet:
 
 - Dossier creation, editing, submission, approval, and declassification workflows
 - Incident submission and reading interfaces
-- Management screens for security settings and the forbidden-word dictionary (Task3.2)
 - Advanced session administration
 - Advanced page design and the language switcher
 
@@ -125,7 +129,7 @@ flask --app app init-db
 flask --app app seed-db
 ```
 
-Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades the legacy permission/status constraints, and adds the nullable `users.deleted_at` column for Task3.1 while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants.
+Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades the legacy permission/status constraints, and adds the nullable `users.deleted_at` column for Task3.1 while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or administrator-managed dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants. A private seed-version marker ensures deleted default dictionary entries are not recreated.
 
 The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
 
@@ -177,9 +181,21 @@ Username and role changes, blocking, and deletion revoke existing sessions in th
 
 The permanent ADMIN identity cannot be renamed, demoted, blocked, or deleted. Administrators cannot remove their own administrative role, block themselves, or delete themselves. Operations also protect the last usable administrator, checking current account and credential state under the same database write lock as the change. Administrative events identify the actor and target account IDs without authentication secrets.
 
-Run `flask --app app init-db` against an existing database before using Task3.1. The upgrade preserves accounts and does not require dropping or recreating the database. See [docs/user_management.md](docs/user_management.md) for endpoint behavior, lifecycle rules, safeguards, tests, and a disposable-account manual walkthrough. Security policy management remains deferred to Task3.2.
+Run `flask --app app init-db` against an existing database before using Task3.1. The upgrade preserves accounts and does not require dropping or recreating the database. See [docs/user_management.md](docs/user_management.md) for endpoint behavior, lifecycle rules, safeguards, tests, and a disposable-account manual walkthrough.
 
 The [Task3.1 delivery report](docs/task3.1-report.md) lists the changed files, delivered functionality, validation, and remaining limits.
+
+## Security policy management (Task3.2)
+
+Open `/admin/security` after signing in with a fully established account that has `security.manage`. This permission is checked independently from `users.manage` on every page and mutation. Unauthenticated browser requests redirect to login; authenticated users without the permission receive HTTP 403. All changes use POST, CSRF validation, an allowlisted backend operation, and a second live authorization check inside the SQLite write transaction.
+
+The panel controls the forbidden-word rule, permanent-password minimum length, permanent-password validity, and server-side inactivity timeout. Minimum length accepts 14 through 128 characters. Password validity accepts 0 through 3650 days; zero disables periodic expiration and remains the default. Session inactivity accepts 1 through 1440 minutes. The temporary-credential lifetime is displayed read-only and remains capped at 12 hours.
+
+`/admin/security/forbidden-words` provides ID-based creation, editing, and deletion. Entries are trimmed and stored in NFKC casefolded form. Matching and duplicate detection additionally remove combining marks and fold Polish `ł` to `l`, so canonical Unicode forms, letter case, and accented/unaccented Polish spellings behave consistently. Jinja escaping prevents stored entries from becoming executable markup. A deleted default stays deleted during later seed runs.
+
+Changes affect subsequent password validation and session validation without rewriting password hashes or bypassing password history. Enabling a stricter policy does not retroactively invalidate existing passwords. Shortening the inactivity timeout can expire existing sessions on their next request; a session already expired or revoked cannot be revived by a later configuration change. Successful changes produce sanitized `security_events` rows containing the actor and non-secret operation details.
+
+See [docs/security_policies.md](docs/security_policies.md) for endpoint behavior, validation bounds, enforcement semantics, audit events, automated coverage, and a concise manual walkthrough.
 
 ## Running tests
 
@@ -189,7 +205,7 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. The symbolic-link test is skipped on hosts that do not permit creating links.
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. Security-policy tests cover independent RBAC, CSRF, strict bounds, mass-assignment resistance, Unicode dictionary CRUD, live password/session enforcement, durable deletions, transactional audit logging, and secret-free output. The symbolic-link test is skipped on hosts that do not permit creating links.
 
 ## Project structure
 
@@ -206,6 +222,7 @@ docs/rbac.md            Roles and permission matrix
 docs/authorization.md   Task2.2 policy, protected endpoints, and verification
 docs/task2.2-report.md  Task2.2 delivery report and validation results
 docs/user_management.md Task3.1 account lifecycle, administrator interface, and verification
+docs/security_policies.md Task3.2 security settings, enforcement, audit behavior, and verification
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
@@ -225,7 +242,6 @@ Authorization helpers under `security/` are reusable by future workflow endpoint
 
 - Dossier authoring, review, and declassification workflows
 - Incident submission and private report interfaces
-- Security policy, password validity, and forbidden-word dictionary management (Task3.2)
 - Advanced session administration
 - A lightweight translation layer with English as the default language and Polish as a second language
 

@@ -27,10 +27,13 @@ def create_app(config_class=Config):
     init_errors(application)
 
     @application.context_processor
-    def user_management_navigation():
+    def administration_navigation():
         from security.permissions import has_permission
 
-        return {"can_manage_users": has_permission("users.manage")}
+        return {
+            "can_manage_users": has_permission("users.manage"),
+            "can_manage_security": has_permission("security.manage"),
+        }
 
     @application.get("/health")
     def health():
