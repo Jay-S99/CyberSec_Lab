@@ -14,17 +14,21 @@ from flask import (
 
 from auth.login import _render as render_secure_template
 from auth.login import require_login
-from database import get_db
-from modules import dossier_management
+from database import get_db, immediate_transaction, utc_now
+from modules import dossier_management, dossier_workflow
 from security.csrf import csrf_tokens_match
 from security.permissions import (
     can_access_dossier,
+    can_declassify_dossier,
     can_edit_dossier,
+    can_review_dossier,
+    can_submit_dossier,
     deny_access,
     has_permission,
     require_permission,
 )
 from security.responses import wants_json_response
+from security.security_log import record_workflow_transition_denied
 from seed import DOSSIER_DIRECTORY
 
 
@@ -34,6 +38,11 @@ FILTER_NAMES = frozenset({"search", "organization", "classification", "status"})
 NOTICES = {
     "created": "Dossier draft created.",
     "updated": "Dossier draft updated.",
+    "submitted": "Dossier submitted for review.",
+    "approved": "Dossier approved. Its classification has not changed.",
+    "rejected": "Dossier rejected.",
+    "declassified": "Dossier declassified.",
+    "processed": "Incident converted into this dossier draft.",
 }
 
 
@@ -71,6 +80,37 @@ def index():
     if wants_json_response():
         return jsonify(dossiers=visible)
     return _render_index(visible, filters)
+
+
+@bp.get("/review")
+@require_permission("dossiers.review")
+def review():
+    try:
+        dossiers = dossier_workflow.list_pending_dossiers(get_db())
+    except dossier_management.DossierError:
+        deny_access("dossiers.review")
+    if wants_json_response():
+        return jsonify(
+            dossiers=[
+                {
+                    key: dossier[key]
+                    for key in (
+                        "id",
+                        "title",
+                        "organization",
+                        "classification",
+                        "status",
+                        "submitted_at",
+                    )
+                }
+                for dossier in dossiers
+            ]
+        )
+    return render_secure_template(
+        "dossier_review.html",
+        dossiers=dossiers,
+        notice=NOTICES.get(request.args.get("notice")),
+    )
 
 
 @bp.route("/new", methods=["GET", "POST"])
@@ -137,12 +177,7 @@ def detail(dossier_id):
     document = load_dossier_document(dossier)
     if wants_json_response():
         return jsonify(document)
-    return render_secure_template(
-        "dossier.html",
-        dossier=document,
-        can_edit=(dossier["status"] == "DRAFT" and can_edit_dossier(dossier)),
-        notice=NOTICES.get(request.args.get("notice")),
-    )
+    return _render_detail(dossier, document)
 
 
 @bp.route("/<dossier_id>/edit", methods=["GET", "POST"])
@@ -213,6 +248,52 @@ def edit(dossier_id):
     )
 
 
+@bp.post("/<dossier_id>/submit")
+@require_permission("dossiers.submit_own")
+def submit(dossier_id):
+    return _perform_transition(
+        dossier_id,
+        dossier_workflow.submit_dossier,
+        "submitted",
+        "dossiers.index",
+    )
+
+
+@bp.post("/<dossier_id>/approve")
+@require_permission("dossiers.review")
+def approve(dossier_id):
+    return _perform_transition(
+        dossier_id,
+        dossier_workflow.approve_dossier,
+        "approved",
+        "dossiers.review",
+    )
+
+
+@bp.post("/<dossier_id>/reject")
+@require_permission("dossiers.review")
+def reject(dossier_id):
+    return _perform_transition(
+        dossier_id,
+        dossier_workflow.reject_dossier,
+        "rejected",
+        "dossiers.review",
+        reason=request.form.get("reason", ""),
+    )
+
+
+@bp.post("/<dossier_id>/declassify")
+@require_permission("dossiers.declassify")
+def declassify(dossier_id):
+    return _perform_transition(
+        dossier_id,
+        dossier_workflow.declassify_dossier,
+        "declassified",
+        "dossiers.detail",
+        confirmed=request.form.get("confirm") == "yes",
+    )
+
+
 def _storage_directory():
     return current_app.config.get("DOSSIER_DIRECTORY") or DOSSIER_DIRECTORY
 
@@ -265,12 +346,94 @@ def _render_index(dossiers, filters, errors=(), status=200):
         dossiers=dossiers,
         filters=filters,
         errors=errors,
+        notice=NOTICES.get(request.args.get("notice")),
         can_create=has_permission("dossiers.create"),
         organizations=sorted(dossier_management.ORGANIZATIONS),
         classifications=sorted(dossier_management.CLASSIFICATIONS),
         statuses=sorted(dossier_management.DOSSIER_STATUSES),
         search_max_length=dossier_management.SEARCH_MAX_LENGTH,
     )
+
+
+def _render_detail(dossier, document, errors=(), status=200):
+    return render_secure_template(
+        "dossier.html",
+        status=status,
+        dossier=document,
+        rejection_reason=(
+            dossier["rejection_reason"]
+            if dossier["status"] == "REJECTED"
+            else None
+        ),
+        can_edit=can_edit_dossier(dossier),
+        can_submit=can_submit_dossier(dossier),
+        can_review=can_review_dossier(dossier),
+        can_declassify=can_declassify_dossier(dossier),
+        notice=NOTICES.get(request.args.get("notice")),
+        errors=errors,
+        rejection_reason_max_length=(
+            dossier_workflow.REJECTION_REASON_MAX_LENGTH
+        ),
+    )
+
+
+def _perform_transition(
+    dossier_id,
+    operation,
+    notice,
+    destination,
+    **kwargs,
+):
+    get_dossier_metadata(dossier_id)
+    if not csrf_tokens_match():
+        return _workflow_error("Invalid request. Reload the page and try again.", 400)
+    try:
+        operation(
+            get_db(),
+            g.user["id"],
+            dossier_id,
+            _storage_directory(),
+            **kwargs,
+        )
+    except dossier_management.DossierError as error:
+        if error.status == 403:
+            deny_access(operation.__name__)
+        if error.status == 404:
+            abort(404)
+        if error.status == 409:
+            _record_transition_denied(dossier_id, operation.__name__)
+        return _workflow_error(str(error), error.status)
+    except sqlite3.Error:
+        current_app.logger.error("Dossier workflow action could not be completed.")
+        return _workflow_error(
+            "The dossier workflow is temporarily unavailable.", 503
+        )
+    route_values = {"notice": notice}
+    if destination == "dossiers.detail":
+        route_values["dossier_id"] = dossier_id
+    return redirect(url_for(destination, **route_values), code=303)
+
+
+def _workflow_error(message, status):
+    if wants_json_response():
+        return jsonify(error="workflow_transition_failed", message=message), status
+    return message, status, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+def _record_transition_denied(dossier_id, action):
+    try:
+        connection = get_db()
+        with immediate_transaction(connection):
+            record_workflow_transition_denied(
+                connection,
+                g.user["id"],
+                "dossier",
+                dossier_id,
+                action.removesuffix("_dossier"),
+                utc_now(),
+            )
+    except (sqlite3.Error, ValueError):
+        current_app.logger.error("Workflow denial event could not be recorded.")
 
 
 def _render_form(

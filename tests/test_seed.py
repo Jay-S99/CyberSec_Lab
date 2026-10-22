@@ -26,6 +26,7 @@ EXPECTED_ROLE_PERMISSIONS = {
         "dossiers.create",
         "dossiers.edit_own",
         "dossiers.submit_own",
+        "incidents.read_submitted",
     },
     "employee": {
         "dossiers.read_declassified",
@@ -308,8 +309,8 @@ def test_seed_twice_does_not_create_duplicates(seeded_app):
 
     assert counts == {
         "roles": 5,
-        "permissions": 13,
-        "role_permissions": 16,
+        "permissions": 14,
+        "role_permissions": 17,
         "users": 8,
         "settings": 7,
         "forbidden_words": len(EXPECTED_FORBIDDEN_WORDS),

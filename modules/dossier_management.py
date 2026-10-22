@@ -9,7 +9,7 @@ from flask import current_app
 
 from database import format_utc, immediate_transaction, parse_utc, utc_now
 from security.permissions import can_access_dossier, can_edit_dossier, has_permission
-from security.security_log import record_dossier_event
+from security.security_log import record_dossier_event, record_incident_event
 from seed import (
     CLASSIFICATIONS,
     DOSSIER_STATUSES,
@@ -119,34 +119,11 @@ def create_dossier(connection, actor_id, submitted, storage_directory):
         with immediate_transaction(connection):
             if not has_permission("dossiers.create"):
                 raise DossierError("Dossier creation is not permitted.", 403)
-            dossier_id = _next_dossier_id(connection, storage_directory)
-            timestamp = format_utc(utc_now())
-            document = _document_from_fields(
-                dossier_id, "DRAFT", fields
-            )
-            target = write_document_atomic(
+            dossier_id, target = _create_dossier_locked(
+                connection,
+                actor_id,
+                fields,
                 storage_directory,
-                f"{dossier_id}.json",
-                document,
-                replace=False,
-            )
-            connection.execute(
-                """
-                INSERT INTO dossiers (
-                    id, title, organization, classification, status,
-                    file_name, created_by, approved_by, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'DRAFT', ?, ?, NULL, ?, ?)
-                """,
-                (
-                    dossier_id,
-                    fields["title"],
-                    fields["organization"],
-                    fields["classification"],
-                    f"{dossier_id}.json",
-                    actor_id,
-                    timestamp,
-                    timestamp,
-                ),
             )
             record_dossier_event(
                 connection, actor_id, dossier_id, "dossier_created", utc_now()
@@ -156,6 +133,126 @@ def create_dossier(connection, actor_id, submitted, storage_directory):
         if target is not None:
             _remove_file(target)
         raise
+
+
+def create_dossier_from_incident(
+    connection,
+    actor_id,
+    incident_id,
+    storage_directory,
+):
+    target = None
+    try:
+        with immediate_transaction(connection):
+            if not (
+                has_permission("incidents.read_submitted")
+                and has_permission("dossiers.create")
+            ):
+                raise DossierError("Incident conversion is not permitted.", 403)
+            incident = connection.execute(
+                "SELECT * FROM incident_reports WHERE id = ?",
+                (incident_id,),
+            ).fetchone()
+            if incident is None:
+                raise DossierError("Incident report not found.", 404)
+            if incident["status"] != "NEW":
+                raise DossierError(
+                    "This incident report has already been processed.", 409
+                )
+            duplicate = connection.execute(
+                "SELECT id FROM dossiers WHERE source_incident_id = ?",
+                (incident_id,),
+            ).fetchone()
+            if duplicate is not None:
+                raise DossierError(
+                    "This incident report already has a dossier.", 409
+                )
+            fields = validate_authoring_fields(
+                {
+                    "title": incident["title"],
+                    "organization": "UNKNOWN",
+                    "classification": "INTERNAL",
+                    "location": "Unknown",
+                    "threat_level": "UNKNOWN",
+                    "summary": incident["description"],
+                    "observations": [
+                        "Incident report received for intelligence analysis."
+                    ],
+                    "conclusion": "Further analysis is required.",
+                }
+            )
+            dossier_id, target = _create_dossier_locked(
+                connection,
+                actor_id,
+                fields,
+                storage_directory,
+                source_incident_id=incident_id,
+            )
+            updated = connection.execute(
+                """
+                UPDATE incident_reports SET status = 'PROCESSED'
+                WHERE id = ? AND status = 'NEW'
+                """,
+                (incident_id,),
+            )
+            if updated.rowcount != 1:
+                raise DossierError(
+                    "This incident report changed during conversion.", 409
+                )
+            now = utc_now()
+            record_dossier_event(
+                connection, actor_id, dossier_id, "dossier_created", now
+            )
+            record_incident_event(
+                connection, actor_id, incident_id, "incident_processed", now
+            )
+        return dossier_id
+    except Exception:
+        if target is not None:
+            _remove_file(target)
+        raise
+
+
+def _create_dossier_locked(
+    connection,
+    actor_id,
+    fields,
+    storage_directory,
+    *,
+    source_incident_id=None,
+):
+    dossier_id = _next_dossier_id(connection, storage_directory)
+    timestamp = format_utc(utc_now())
+    document = _document_from_fields(dossier_id, "DRAFT", fields)
+    target = write_document_atomic(
+        storage_directory,
+        f"{dossier_id}.json",
+        document,
+        replace=False,
+    )
+    connection.execute(
+        """
+        INSERT INTO dossiers (
+            id, title, organization, classification, status,
+            file_name, created_by, approved_by, source_incident_id,
+            submitted_at, reviewed_at, rejection_reason,
+            declassified_by, declassified_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'DRAFT', ?, ?, NULL, ?, NULL, NULL,
+                  NULL, NULL, NULL, ?, ?)
+        """,
+        (
+            dossier_id,
+            fields["title"],
+            fields["organization"],
+            fields["classification"],
+            f"{dossier_id}.json",
+            actor_id,
+            source_incident_id,
+            timestamp,
+            timestamp,
+        ),
+    )
+    return dossier_id, target
 
 
 def update_dossier(

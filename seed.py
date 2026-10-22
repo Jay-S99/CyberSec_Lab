@@ -80,6 +80,10 @@ PERMISSIONS = (
         "incidents.read_own",
         "Read incident reports created by the current user.",
     ),
+    (
+        "incidents.read_submitted",
+        "Review submitted incident reports and prepare dossier drafts.",
+    ),
 )
 
 ROLE_PERMISSIONS = {
@@ -100,6 +104,7 @@ ROLE_PERMISSIONS = {
         "dossiers.create",
         "dossiers.edit_own",
         "dossiers.submit_own",
+        "incidents.read_submitted",
     ),
     "employee": (
         "dossiers.read_declassified",
@@ -409,38 +414,60 @@ def _seed_forbidden_words(connection, timestamp, already_initialized):
 
 
 def _seed_dossiers(connection, dossiers, timestamp):
+    dossier_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(dossiers)")
+    }
+    workflow_columns = {
+        "source_incident_id",
+        "submitted_at",
+        "reviewed_at",
+        "rejection_reason",
+        "declassified_by",
+        "declassified_at",
+    }
     for dossier in dossiers:
-        connection.execute(
-            """
-            INSERT INTO dossiers (
-                id,
-                title,
-                organization,
-                classification,
-                status,
-                file_name,
-                created_by,
-                approved_by,
-                created_at,
-                updated_at
-            )
-            SELECT ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?
-            WHERE NOT EXISTS (
-                SELECT 1 FROM dossiers WHERE id = ?
-            )
-            """,
-            (
-                dossier["id"],
-                dossier["title"],
-                dossier["organization"],
-                dossier["classification"],
-                dossier["status"],
-                dossier["file_name"],
-                timestamp,
-                timestamp,
-                dossier["id"],
-            ),
+        values = (
+            dossier["id"],
+            dossier["title"],
+            dossier["organization"],
+            dossier["classification"],
+            dossier["status"],
+            dossier["file_name"],
+            timestamp,
+            timestamp,
+            dossier["id"],
         )
+        if workflow_columns <= dossier_columns:
+            connection.execute(
+                """
+                INSERT INTO dossiers (
+                    id, title, organization, classification, status, file_name,
+                    created_by, approved_by, source_incident_id, submitted_at,
+                    reviewed_at, rejection_reason, declassified_by,
+                    declassified_at, created_at, updated_at
+                )
+                SELECT ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL,
+                       NULL, NULL, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM dossiers WHERE id = ?
+                )
+                """,
+                values,
+            )
+        else:
+            connection.execute(
+                """
+                INSERT INTO dossiers (
+                    id, title, organization, classification, status, file_name,
+                    created_by, approved_by, created_at, updated_at
+                )
+                SELECT ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM dossiers WHERE id = ?
+                )
+                """,
+                values,
+            )
 
 
 def _role_id(connection, name):

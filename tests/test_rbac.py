@@ -60,16 +60,47 @@ def _initialize_legacy_database(connection, monkeypatch):
         "            'dossiers.read_doom_level',\n", ""
     )
     legacy_schema = legacy_schema.replace(
+        "            'incidents.read_submitted'\n",
+        "            'incidents.read_own'\n",
+    ).replace(
+        "            'incidents.read_own',\n            'incidents.read_own'\n",
+        "            'incidents.read_own'\n",
+    )
+    legacy_schema = legacy_schema.replace(
         "'DRAFT', 'PENDING', 'SUBMITTED'", "'DRAFT', 'SUBMITTED'"
+    )
+    for line in (
+        "    source_incident_id INTEGER,\n",
+        "    submitted_at TEXT,\n",
+        "    reviewed_at TEXT,\n",
+        "    rejection_reason TEXT CHECK (\n"
+        "        rejection_reason IS NULL OR length(trim(rejection_reason)) > 0\n"
+        "    ),\n",
+        "    declassified_by INTEGER,\n",
+        "    declassified_at TEXT,\n",
+        "    FOREIGN KEY (source_incident_id) REFERENCES incident_reports (id)\n"
+        "        ON DELETE RESTRICT,\n",
+        "    FOREIGN KEY (declassified_by) REFERENCES users (id) ON DELETE RESTRICT\n",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_source_incident\n"
+        "    ON dossiers (source_incident_id) WHERE source_incident_id IS NOT NULL;\n",
+    ):
+        legacy_schema = legacy_schema.replace(line, "")
+    legacy_schema = legacy_schema.replace(
+        "    FOREIGN KEY (approved_by) REFERENCES users (id) ON DELETE RESTRICT,\n",
+        "    FOREIGN KEY (approved_by) REFERENCES users (id) ON DELETE RESTRICT\n",
     )
     connection.executescript(legacy_schema)
     with monkeypatch.context() as legacy_catalog:
         legacy_catalog.setattr(seed, "PERMISSIONS", tuple(
             entry for entry in seed.PERMISSIONS
             if entry[0] != "dossiers.read_doom_level"
+            and entry[0] != "incidents.read_submitted"
         ))
         legacy_catalog.setattr(seed, "ROLE_PERMISSIONS", {
-            role: tuple(name for name in names if name != "dossiers.read_doom_level")
+            role: tuple(
+                name for name in names
+                if name not in {"dossiers.read_doom_level", "incidents.read_submitted"}
+            )
             for role, names in seed.ROLE_PERMISSIONS.items()
         })
         seed_database()
@@ -84,6 +115,19 @@ def _snapshot(connection):
         ]
         for name in REQUIRED_TABLES
     }
+
+
+def _dossier_core_snapshot(connection):
+    return [
+        tuple(row)
+        for row in connection.execute(
+            """
+            SELECT id, title, organization, classification, status, file_name,
+                   created_by, approved_by, created_at, updated_at
+            FROM dossiers ORDER BY rowid
+            """
+        )
+    ]
 
 
 def test_legacy_schema_upgrade_preserves_data_and_manual_revocations(
@@ -105,9 +149,14 @@ def test_legacy_schema_upgrade_preserves_data_and_manual_revocations(
         connection.execute("CREATE INDEX idx_custom_dossier_title ON dossiers(title)")
         connection.commit()
         before = _snapshot(connection)
+        before_dossiers = _dossier_core_snapshot(connection)
+        del before["dossiers"]
         init_db()
         init_db()
-        assert _snapshot(connection) == before
+        after = _snapshot(connection)
+        del after["dossiers"]
+        assert after == before
+        assert _dossier_core_snapshot(connection) == before_dossiers
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert not connection.execute("PRAGMA foreign_key_check").fetchall()
         assert connection.execute(
@@ -126,7 +175,7 @@ def test_legacy_schema_upgrade_preserves_data_and_manual_revocations(
         }
         assert "dossiers.read_doom_level" in granted
         assert "dossiers.read_classified" not in granted
-        assert _snapshot(connection)["dossiers"] == before["dossiers"]
+        assert _dossier_core_snapshot(connection) == before_dossiers
         connection.execute("UPDATE dossiers SET status = 'PENDING' WHERE id = 'DV-003'")
         connection.commit()
         with pytest.raises(sqlite3.IntegrityError):
@@ -145,9 +194,14 @@ def test_failed_legacy_upgrade_rolls_back_and_restores_foreign_keys(
         connection.commit()
         connection.execute("PRAGMA foreign_keys = ON")
         before = _snapshot(connection)
+        before_dossiers = _dossier_core_snapshot(connection)
+        del before["dossiers"]
         with pytest.raises(RuntimeError, match="Foreign key validation"):
             init_db()
-        assert _snapshot(connection) == before
+        after = _snapshot(connection)
+        del after["dossiers"]
+        assert after == before
+        assert _dossier_core_snapshot(connection) == before_dossiers
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         permission_sql = connection.execute(
             "SELECT sql FROM sqlite_master WHERE name = 'permissions'"

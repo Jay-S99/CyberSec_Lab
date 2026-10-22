@@ -84,4 +84,4 @@ For a manual check, initialize and seed a disposable database, provision develop
 4. Sign in as another editor and confirm that the first editor's draft cannot be opened or edited.
 5. Sign in as a manager and verify the existing classified-read policy. Sign in as `ADMIN` and verify that administration rights do not grant dossier access.
 
-Use disposable records for manual testing and do not edit seeded MCU documents. Task4.2 will add submission, approval, rejection, declassification, and incident-report workflows.
+Use disposable records for manual testing and do not edit seeded MCU documents. The lifecycle added in Task4.2 is documented in [dossier_workflow.md](dossier_workflow.md).

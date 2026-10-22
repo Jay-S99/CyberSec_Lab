@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, Task3.2 security policy management, and Task4.1 dossier management are implemented. Dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Authorized editors can search the permitted archive, create controlled draft records, and edit only drafts they own. Authorized administrators can manage account lifecycles and security policy without receiving implicit dossier access.
+Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, Task3.2 security policy management, Task4.1 dossier management, and the Task4.2 incident-to-declassification workflow are implemented. Dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Employees can submit private incidents, editors can convert reports into owned drafts, and managers can review eligible classified records without receiving administration privileges.
 
 ## Technology stack
 
@@ -31,7 +31,7 @@ Implemented:
 - Flask application factory and `GET /health`
 - SQLite database stored under `instance/`, with foreign keys enforced on every connection
 - Repeatable `init-db` and `seed-db` commands
-- Five roles, thirteen permissions, and an explicit least-privilege role mapping
+- Five roles, fourteen permissions, and an explicit least-privilege role mapping
 - Eight user records, including the permanent `ADMIN` identity, with no passwords until provisioning
 - Variant 10 security settings and the forbidden-word dictionary
 - Eight fictional dossier JSON files and matching dossier metadata
@@ -54,6 +54,13 @@ Implemented:
 - Validated UTF-8 JSON storage with bounded documents and atomic file replacement
 - Coordinated SQLite/JSON persistence with compensating cleanup and restoration
 - Sanitized dossier creation and update security events
+- Employee incident submission and ownership-protected report history
+- Editor-only incident review and atomic incident-to-dossier conversion
+- Owned-draft submission to a manager review queue
+- Classification-preserving dossier approval and reasoned rejection
+- Controlled declassification with an explicit DOOM_LEVEL prohibition
+- Conditional lifecycle transitions with synchronized SQLite and JSON state
+- Sanitized incident and dossier workflow security events
 - Classification and lifecycle checks, with additional DOOM_LEVEL permission
 - A protected administrator dashboard with live account counts
 - User listing, username search, role/status filters, account creation, and editing
@@ -72,10 +79,8 @@ Implemented:
 
 Not implemented yet:
 
-- Dossier submission, approval, rejection, and declassification workflows
-- Incident submission and reading interfaces
 - Advanced session administration
-- Advanced page design and the language switcher
+- Task5.1 visual design and the language switcher
 
 ## Requirements
 
@@ -135,7 +140,7 @@ flask --app app init-db
 flask --app app seed-db
 ```
 
-Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades the legacy permission/status constraints, and adds the nullable `users.deleted_at` column for Task3.1 while preserving existing rows. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or administrator-managed dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants. A private seed-version marker ensures deleted default dictionary entries are not recreated.
+Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades legacy permission/status constraints, and adds nullable lifecycle columns without recreating the database or changing existing dossier content. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or administrator-managed dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants. A private seed-version marker ensures deleted default dictionary entries are not recreated.
 
 The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
 
@@ -173,7 +178,7 @@ Unauthenticated browser requests redirect to login; JSON requests receive HTTP 4
 
 For an existing Task2.1 database, run `flask --app app init-db` followed by `flask --app app seed-db` before using the new endpoints. The development database is not migrated by the test suite.
 
-See [docs/rbac.md](docs/rbac.md) for all thirteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
+See [docs/rbac.md](docs/rbac.md) for all fourteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
 
 ## Dossier management (Task4.1)
 
@@ -187,7 +192,19 @@ SQLite remains authoritative for authorization metadata. JSON files contain the 
 
 Successful creation and editing record `dossier_created` or `dossier_updated` in `security_events` with only the actor ID and dossier ID. Summaries, observations, credentials, session identifiers, and filesystem paths are not logged. Missing dossiers and invalid document references return HTTP 404; existing but unauthorized records return the existing generic HTTP 403 response.
 
-See [docs/dossier_management.md](docs/dossier_management.md) for the JSON structure, endpoint behavior, storage guarantees, automated coverage, and a concise manual walkthrough. Approval, declassification, and incident workflows remain deferred to Task4.2.
+See [docs/dossier_management.md](docs/dossier_management.md) for the JSON structure, endpoint behavior, storage guarantees, automated coverage, and a concise manual walkthrough.
+
+## Classification and approval workflow (Task4.2)
+
+Employees with `incidents.create` can submit bounded title and description text through `GET` and `POST /incidents/new`. The server assigns ownership and `NEW`; client-supplied owners or statuses are ignored. `/incidents` exposes only the authenticated employee's reports. Editors receive the separate `incidents.read_submitted` permission and may review `NEW` reports without gaining access to unrelated account data.
+
+An editor can convert an authorized incident into one owned `DRAFT`. The operation copies only appropriate report content, records `source_incident_id`, publishes the validated JSON document, changes the incident to `PROCESSED`, and records sanitized events in one coordinated operation. A partial database or storage failure leaves the report `NEW`, removes incomplete files, and creates no success event. The unique source relationship prevents duplicate conversion.
+
+Owned drafts move from `DRAFT` to `PENDING` through a CSRF-protected POST. Managers with `dossiers.review` see only authorized pending records. Approval changes `PENDING` to `APPROVED`, records the manager, and deliberately preserves classification. Rejection changes `PENDING` to terminal `REJECTED`; its bounded reason is stored in SQLite, omitted from security logs, and shown only to the authorized owner. Ordinary editing and resubmission cannot reopen a rejected dossier.
+
+Declassification is a separate confirmed POST available only for authorized `APPROVED` records. It atomically changes both status and classification to `DECLASSIFIED`, records the responsible manager and the previous classification, and then permits ordinary declassified readers to access the record. The standard route always rejects `DOOM_LEVEL`, even for a manager who may read it. Conditional updates, immediate write transactions, and atomic JSON replacement prevent competing workflow actions from producing contradictory database and document state.
+
+Missing resources return HTTP 404, authorization failures return HTTP 403 without classified content, invalid or stale lifecycle transitions return HTTP 409, and malformed input or CSRF tokens return HTTP 400. See [docs/dossier_workflow.md](docs/dossier_workflow.md) for endpoints, status rules, concurrency guarantees, audit behavior, automated coverage, and the complete manual verification path.
 
 ## User management (Task3.1)
 
@@ -244,6 +261,7 @@ docs/task2.2-report.md  Task2.2 delivery report and validation results
 docs/user_management.md Task3.1 account lifecycle, administrator interface, and verification
 docs/security_policies.md Task3.2 security settings, enforcement, audit behavior, and verification
 docs/dossier_management.md Task4.1 registry, authoring, storage, and verification
+docs/dossier_workflow.md Task4.2 incidents, approval lifecycle, declassification, and verification
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
@@ -257,13 +275,12 @@ tests/                  Automated tests
 instance/               Local runtime data; database files are not committed
 ```
 
-Authorization helpers under `security/` are reusable by future workflow endpoints. Message codes for a future Polish catalog live in `auth/messages.py`; language switching remains deferred.
+Authorization helpers under `security/` are reused by the workflow endpoints. Message codes for a future Polish catalog live in `auth/messages.py`; language switching remains deferred.
 
 ## Planned features
 
-- Dossier submission, review, and declassification workflows
-- Incident submission and private report interfaces
 - Advanced session administration
+- Task5.1 DoomVault visual design
 - A lightweight translation layer with English as the default language and Polish as a second language
 
 ## Disclaimer

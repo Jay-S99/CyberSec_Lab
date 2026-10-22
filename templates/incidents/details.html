@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ incident_identifier }} - DoomVault{% endblock %}
+{% block body_class %}dossier-page{% endblock %}
+{% block content %}
+<header class="dossier-header"><div><p class="dossier-kicker">Incident {{ incident_identifier }}</p><h1>{{ incident.title }}</h1></div></header>
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if errors %}<div role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+<dl class="dossier-metadata">
+  <div><dt>Status</dt><dd><span class="dossier-badge">{{ incident.status }}</span></dd></div>
+  <div><dt>Created</dt><dd>{{ incident.created_at }}</dd></div>
+</dl>
+<section class="dossier-section"><h2>Description</h2><p>{{ incident.description }}</p></section>
+{% if can_convert %}
+<form method="post" action="{{ url_for('incidents.convert', incident_id=incident.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">Create dossier draft</button>
+</form>
+{% endif %}
+<p><a href="{% if can_review_incidents %}{{ url_for('incidents.review') }}{% else %}{{ url_for('incidents.index') }}{% endif %}">Return to incident list</a></p>
+{% endblock %}

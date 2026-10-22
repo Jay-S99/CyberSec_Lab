@@ -79,21 +79,21 @@ A value of `0` for password validity means permanent passwords do not expire on 
 
 ### dossiers
 
-Metadata for a JSON dossier. `id` is a stable identifier such as `DV-001`. `file_name` must be that identifier plus `.json`, so the column cannot store a user-supplied path. `created_by` and `approved_by` reference `users` and are null for the seeded archive because those inactive accounts did not author the files.
+Metadata for a JSON dossier. `id` is a stable identifier such as `DV-001`. `file_name` must be that identifier plus `.json`, so the column cannot store a user-supplied path. `created_by`, `approved_by`, and `declassified_by` reference `users` and are null for the seeded archive because those inactive accounts did not author the files. `source_incident_id` optionally references the report from which an editor created the draft and is unique when present.
 
 `organization` is `SHIELD`, `HYDRA`, `SWORD`, or `UNKNOWN`.
 
 `classification` is `DECLASSIFIED`, `INTERNAL`, `SECRET`, `TOP_SECRET`, or `DOOM_LEVEL`. `DOOM_LEVEL` is a classification label, not a role.
 
-`status` is `DRAFT`, `PENDING`, `SUBMITTED`, `APPROVED`, `REJECTED`, or `DECLASSIFIED`. `PENDING` is the Task2.2 review state; existing `SUBMITTED` rows retain their value and equivalent access policy. No workflow endpoints are introduced.
+`status` is `DRAFT`, `PENDING`, `SUBMITTED`, `APPROVED`, `REJECTED`, or `DECLASSIFIED`. Task4.2 uses `PENDING`; existing `SUBMITTED` rows retain their value and equivalent read policy but are not transition sources. `submitted_at`, `reviewed_at`, and `declassified_at` record UTC lifecycle times. A bounded rejection reason is stored only for a rejected dossier and is not copied into its JSON file or activity log.
 
 ### incident_reports
 
-Reserved for incident reports submitted by employees. `created_by` references `users`. No reports are seeded.
+Employee-submitted reports. `created_by` references the authenticated user, status is controlled as `NEW` or `PROCESSED`, and no reports are seeded. Narrative reports stay in SQLite and are never written to a second document store.
 
 ### security_events
 
-A basic event log. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, or other authentication secrets. Failed sign-in attempts record `login_failure` and a hash of the normalized username. Session lifecycle operations record `session_created`, `session_expired`, `session_revoked`, and `session_logout`. Task2.2 records one `authorization_denied` event per denied request, with the current user ID and a server-defined operation. Routine activity and successful permission checks are not logged.
+A basic event log. `user_id` may be null for an event that is not tied to an account. Descriptions must not contain passwords, password hashes, session tokens, incident descriptions, dossier content, or rejection reasons. Failed sign-in attempts record `login_failure` and a hash of the normalized username. Session lifecycle operations record `session_created`, `session_expired`, `session_revoked`, and `session_logout`. Task2.2 records one `authorization_denied` event per denied request. Task4.2 records sanitized incident creation/processing and dossier submission/review/declassification events.
 
 ## Relationships
 
@@ -102,10 +102,11 @@ Foreign keys use `ON DELETE RESTRICT`. A role or user referenced by another row 
 - `users.role_id` references `roles`
 - `role_permissions` references `roles` and `permissions`
 - `password_history`, `temporary_passwords`, and `sessions` reference `users`
-- `dossiers.created_by` and `dossiers.approved_by` reference `users`
+- `dossiers.created_by`, `dossiers.approved_by`, and `dossiers.declassified_by` reference `users`
+- `dossiers.source_incident_id` references `incident_reports`
 - `incident_reports.created_by` and `security_events.user_id` reference `users`
 
-Indexes cover role lookup, dossier organization, classification, and status, session expiry, password history by user and time, and security events by user, type, and time.
+Indexes cover role lookup, dossier organization, classification, status, and unique non-null source incident, incident status/owner, session expiry, password history by user and time, and security events by user, type, and time.
 
 ## Dossier files
 

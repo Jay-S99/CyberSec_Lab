@@ -52,13 +52,31 @@ def record_security_configuration_event(
     )
 
 
-def record_dossier_event(connection, actor_id, dossier_id, event_type, now):
+def record_dossier_event(
+    connection,
+    actor_id,
+    dossier_id,
+    event_type,
+    now,
+    *,
+    previous_classification=None,
+):
     descriptions = {
         "dossier_created": "Dossier created",
         "dossier_updated": "Dossier updated",
+        "dossier_submitted": "Dossier submitted",
+        "dossier_approved": "Dossier approved",
+        "dossier_rejected": "Dossier rejected",
+        "dossier_declassified": "Dossier declassified",
     }
     if event_type not in descriptions:
         raise ValueError("Unsupported dossier event.")
+    description = f"{descriptions[event_type]}; dossier_id={dossier_id}."
+    if event_type == "dossier_declassified" and previous_classification:
+        description = (
+            f"{descriptions[event_type]}; dossier_id={dossier_id}; "
+            f"previous_classification={previous_classification}."
+        )
     connection.execute(
         """
         INSERT INTO security_events (user_id, event_type, description, created_at)
@@ -67,7 +85,54 @@ def record_dossier_event(connection, actor_id, dossier_id, event_type, now):
         (
             actor_id,
             event_type,
-            f"{descriptions[event_type]}; dossier_id={dossier_id}.",
+            description,
+            format_utc(now),
+        ),
+    )
+
+
+def record_incident_event(connection, actor_id, incident_id, event_type, now):
+    descriptions = {
+        "incident_created": "Incident report created",
+        "incident_processed": "Incident report processed",
+    }
+    if event_type not in descriptions:
+        raise ValueError("Unsupported incident event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            actor_id,
+            event_type,
+            f"{descriptions[event_type]}; incident_id={incident_id}.",
+            format_utc(now),
+        ),
+    )
+
+
+def record_workflow_transition_denied(
+    connection,
+    actor_id,
+    resource_kind,
+    resource_id,
+    action,
+    now,
+):
+    if resource_kind not in {"dossier", "incident"}:
+        raise ValueError("Unsupported workflow resource.")
+    if action not in {"submit", "approve", "reject", "declassify", "convert"}:
+        raise ValueError("Unsupported workflow action.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, 'workflow_transition_denied', ?, ?)
+        """,
+        (
+            actor_id,
+            "Workflow transition denied; "
+            f"resource={resource_kind}:{resource_id}; action={action}.",
             format_utc(now),
         ),
     )

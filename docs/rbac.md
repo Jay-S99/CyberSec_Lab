@@ -8,7 +8,7 @@ Each role receives only the permissions required for its responsibilities.
 
 - The administrator manages accounts and security settings, and does not receive classified or declassified dossier access.
 - The manager reviews, approves, rejects, and declassifies dossiers, and does not manage users or security settings.
-- The editor works on dossiers the editor owns, and does not receive classified archive access or approval rights.
+- The editor reviews submitted incidents, works on dossiers the editor owns, and does not receive classified archive access or approval rights.
 - The employee submits and reads the employee's own incident reports, and can read declassified dossiers.
 - The reader can read declassified dossiers and has no editing, review, or administration rights.
 
@@ -33,6 +33,7 @@ Seed records are not authenticated users. An inactive row with a null password h
 | `dossiers.declassify` | No | Yes | No | No | No |
 | `incidents.create` | No | No | No | Yes | No |
 | `incidents.read_own` | No | No | No | Yes | No |
+| `incidents.read_submitted` | No | No | Yes | No | No |
 
 ## Role responsibilities
 
@@ -40,7 +41,7 @@ Seed records are not authenticated users. An inactive row with a null password h
 | --- | --- | --- |
 | `administrator` | Administrator | Manage accounts, assign roles, configure password policy and security settings |
 | `manager` | Manager | Review classified dossiers, approve or reject submissions, declassify approved dossiers |
-| `editor` | Editor | Create dossiers, edit owned drafts, submit dossiers for approval |
+| `editor` | Editor | Review submitted incidents, create dossiers, edit owned drafts, submit dossiers for approval |
 | `employee` | Employee | Submit incident reports, review owned reports, read declassified dossiers |
 | `reader` | Reader | Read declassified dossiers |
 
@@ -72,14 +73,15 @@ Every seeded account is inactive, has `password_hash` set to null, has `must_cha
 - `dossiers.read_declassified`: read dossiers with both classification and status `DECLASSIFIED`.
 - `dossiers.read_classified`: read `INTERNAL`, `SECRET`, and `TOP_SECRET` dossiers in `PENDING`, legacy `SUBMITTED`, or `APPROVED` states.
 - `dossiers.read_doom_level`: an additional gate for DOOM_LEVEL content; also requires classified reading and a permitted review state.
-- `dossiers.read_own_drafts`: read owned non-DOOM_LEVEL classified drafts and rejected working copies.
-- `dossiers.create`: future creation of dossier drafts.
-- `dossiers.edit_own`: authorize editing an owned working dossier through `can_edit_dossier`; no editing endpoint yet.
-- `dossiers.submit_own`: authorize submission of an owned working dossier through `can_submit_dossier`; no submission endpoint yet.
-- `dossiers.review`: future approval or rejection of submitted dossiers.
-- `dossiers.declassify`: future declassification of approved dossiers.
-- `incidents.create`: future incident reporting.
-- `incidents.read_own`: authorize reading an owned report through `can_view_incident`; no report interface yet.
+- `dossiers.read_own_drafts`: read owned non-DOOM_LEVEL classified drafts and terminal rejected records.
+- `dossiers.create`: create an owned dossier draft directly or from an authorized incident.
+- `dossiers.edit_own`: edit an owned `DRAFT`; rejected and submitted records are excluded.
+- `dossiers.submit_own`: submit an owned `DRAFT` for review; rejected records cannot be reopened.
+- `dossiers.review`: open the authorized pending queue and approve or reject `PENDING` dossiers.
+- `dossiers.declassify`: declassify an authorized non-DOOM_LEVEL `APPROVED` dossier.
+- `incidents.create`: submit an employee-owned incident report.
+- `incidents.read_own`: read reports owned by the current employee.
+- `incidents.read_submitted`: review `NEW` incident reports and convert one into an editor-owned draft.
 
 There is no role inheritance, wildcard grant, username exception, or administrator bypass. Explicit dossier grants could be assigned to an administrator in SQLite, but administrative authority alone never grants intelligence access.
 
@@ -87,6 +89,6 @@ There is no role inheritance, wildcard grant, username exception, or administrat
 
 `get_user_permissions()` resolves the authenticated user's current role and explicit grants from SQLite. `has_permission()` denies unknown permissions, missing/invalid roles, unavailable permission data, and inactive or blocked accounts. The session boundary requires password setup before protected access. Client cookies and parameters never supply authoritative permissions.
 
-The matrix describes initial grants. Seeding initializes grants for newly inserted roles or permissions, including the manager-only DOOM_LEVEL grant during upgrade. It does not restore manually removed grants for existing roles and permissions, and it preserves custom grants. Removing a permission applies on the next request using the same session; changing the user's role retains Task2.1's reauthentication requirement.
+The matrix describes initial grants. Seeding initializes grants for newly inserted roles or permissions, including the manager-only DOOM_LEVEL grant and editor-only incident review grant during upgrade. It does not restore manually removed grants for existing roles and permissions, and it preserves custom grants. Removing a permission applies on the next request using the same session; changing the user's role retains Task2.1's reauthentication requirement.
 
 Classification, ownership, lifecycle rules, secure file retrieval, and verification instructions are in [authorization.md](authorization.md).
