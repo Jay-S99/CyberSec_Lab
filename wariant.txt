@@ -1,7 +1,7 @@
 Wariant zabezpieczeń nr.10
 flask --app app run --host 127.0.0.1 --port 5000
 
-TASK 3.2 - MAPA PLIKÓW
+MAPA PLIKÓW
 
 Główna konfiguracja aplikacji
 - app.py
