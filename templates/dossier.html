@@ -13,6 +13,11 @@
 </header>
 
 {% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+{% if errors %}
+  <div role="alert">
+    {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
 
 <dl class="dossier-metadata">
   <div><dt>Organization</dt><dd>{{ dossier.organization }}</dd></div>
@@ -21,6 +26,13 @@
   {% if dossier.incident.location %}<div><dt>Location</dt><dd>{{ dossier.incident.location }}</dd></div>{% endif %}
   {% if dossier.incident.threat_level %}<div><dt>Threat level</dt><dd>{{ dossier.incident.threat_level }}</dd></div>{% endif %}
 </dl>
+
+{% if rejection_reason %}
+  <section class="dossier-section">
+    <h2>Rejection reason</h2>
+    <p>{{ rejection_reason }}</p>
+  </section>
+{% endif %}
 
 {% if dossier.incident.summary %}
   <section class="dossier-section">
@@ -44,6 +56,44 @@
   <section class="dossier-section">
     <h2>Conclusion</h2>
     <p>{{ dossier.incident.conclusion }}</p>
+  </section>
+{% endif %}
+
+{% if can_submit %}
+  <form method="post" action="{{ url_for('dossiers.submit', dossier_id=dossier.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Submit for approval</button>
+  </form>
+{% endif %}
+
+{% if can_review %}
+  <section class="dossier-section">
+    <h2>Manager review</h2>
+    <form method="post" action="{{ url_for('dossiers.approve', dossier_id=dossier.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Approve dossier</button>
+    </form>
+    <form method="post" action="{{ url_for('dossiers.reject', dossier_id=dossier.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="reason">Rejection reason
+        <textarea id="reason" name="reason" maxlength="{{ rejection_reason_max_length }}" required></textarea>
+      </label>
+      <button type="submit">Reject dossier</button>
+    </form>
+  </section>
+{% endif %}
+
+{% if can_declassify %}
+  <section class="dossier-section">
+    <h2>Controlled declassification</h2>
+    <form method="post" action="{{ url_for('dossiers.declassify', dossier_id=dossier.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>
+        <input type="checkbox" name="confirm" value="yes" required>
+        I confirm this approved dossier may be declassified.
+      </label>
+      <button type="submit">Declassify dossier</button>
+    </form>
   </section>
 {% endif %}
 

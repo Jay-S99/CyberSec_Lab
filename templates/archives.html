@@ -13,6 +13,8 @@
   {% endif %}
 </header>
 
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+
 {% if errors %}
   <div role="alert">
     {% for error in errors %}<p>{{ error }}</p>{% endfor %}
