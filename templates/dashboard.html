@@ -15,6 +15,16 @@
 {% endif %}
 <p>Authenticated session established.</p>
 <p><a href="{{ url_for('dossiers.index') }}">Browse authorized dossiers</a></p>
+{% if can_create_incident %}
+<p><a href="{{ url_for('incidents.create') }}">Submit incident report</a></p>
+<p><a href="{{ url_for('incidents.index') }}">View my incident reports</a></p>
+{% endif %}
+{% if can_review_incidents %}
+<p><a href="{{ url_for('incidents.review') }}">Review incident reports</a></p>
+{% endif %}
+{% if can_review_dossiers %}
+<p><a href="{{ url_for('dossiers.review') }}">Review pending dossiers</a></p>
+{% endif %}
 {% if can_create_dossier %}
 <p><a href="{{ url_for('dossiers.create') }}">Create dossier draft</a></p>
 {% endif %}
