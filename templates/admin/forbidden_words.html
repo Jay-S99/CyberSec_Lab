@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% block title %}Forbidden words - DoomVault{% endblock %}
+{% block admin_content %}
+<div class="admin-heading">
+  <div>
+    <h1>Forbidden words</h1>
+    <p>Manage organization-specific terms rejected in future permanent passwords while the policy is enabled.</p>
+  </div>
+  <a href="{{ url_for('admin.security') }}">Back to security settings</a>
+</div>
+
+<section class="admin-policy-card admin-add-word" aria-labelledby="add-word-heading">
+  <h2 id="add-word-heading">Add a word</h2>
+  <form method="post" action="{{ url_for('admin.forbidden_words') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="new-forbidden-word">Word or token</label>
+    <input id="new-forbidden-word" name="word" type="text" maxlength="{{ maximum_word_length }}" value="{{ new_word }}" required>
+    <p class="admin-muted">Entries are trimmed and matched case-insensitively. Unicode-equivalent and accented/unaccented Polish forms are treated consistently.</p>
+    <button type="submit">Add forbidden word</button>
+  </form>
+</section>
+
+<div class="admin-table-scroll">
+  <table class="admin-table admin-words-table">
+    <caption>{{ words|length }} forbidden {{ "entry" if words|length == 1 else "entries" }}. Changes apply to subsequent password validation.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entry</th>
+        <th scope="col">Created</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in words %}
+        <tr>
+          <th scope="row">
+            <form class="admin-inline-edit" method="post" action="{{ url_for('admin.edit_forbidden_word', word_id=entry.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label class="admin-visually-hidden" for="word-{{ entry.id }}">Edit {{ entry.word }}</label>
+              <input id="word-{{ entry.id }}" name="word" type="text" maxlength="{{ maximum_word_length }}" value="{{ entry.word }}" required>
+              <button class="admin-secondary" type="submit">Save</button>
+            </form>
+          </th>
+          <td class="admin-date">{{ entry.created_at }}</td>
+          <td>
+            <details class="admin-delete">
+              <summary>Delete entry</summary>
+              <form method="post" action="{{ url_for('admin.delete_forbidden_word', word_id=entry.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <p>This removes the term from future password checks.</p>
+                <label class="admin-check" for="confirm-delete-word-{{ entry.id }}">
+                  <input id="confirm-delete-word-{{ entry.id }}" name="confirm_delete" type="checkbox" value="yes" required>
+                  <span>I confirm deletion of {{ entry.word }}.</span>
+                </label>
+                <button class="admin-danger" type="submit">Delete</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">The dictionary is empty. Add an entry above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
