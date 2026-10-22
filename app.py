@@ -8,6 +8,7 @@ from config import Config
 from database import init_app as init_database
 from modules.admin import bp as admin_blueprint
 from modules.dossiers import bp as dossiers_blueprint
+from modules.incidents import bp as incidents_blueprint
 from security.errors import init_app as init_errors
 from seed import init_app as init_seed
 
@@ -24,6 +25,7 @@ def create_app(config_class=Config):
     init_provisioning(application)
     application.register_blueprint(admin_blueprint)
     application.register_blueprint(dossiers_blueprint)
+    application.register_blueprint(incidents_blueprint)
     init_errors(application)
 
     @application.context_processor
@@ -34,6 +36,9 @@ def create_app(config_class=Config):
             "can_manage_users": has_permission("users.manage"),
             "can_manage_security": has_permission("security.manage"),
             "can_create_dossier": has_permission("dossiers.create"),
+            "can_create_incident": has_permission("incidents.create"),
+            "can_review_incidents": has_permission("incidents.read_submitted"),
+            "can_review_dossiers": has_permission("dossiers.review"),
         }
 
     @application.get("/health")
