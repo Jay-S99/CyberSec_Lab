@@ -14,7 +14,7 @@ Decorators enforce operation permissions. Dossier routes also apply `can_access_
 
 `is_resource_owner(resource)` compares a positive integer `created_by` against the current authenticated user's ID. Missing, null, boolean, string, zero, and invalid owners are never treated as the current user. Request body/query ownership values are ignored.
 
-- `can_edit_dossier` and `can_submit_dossier` require the corresponding permission, valid metadata, ownership, and `DRAFT` or `REJECTED` status. Released and DOOM_LEVEL content cannot be changed through these helpers.
+- `can_edit_dossier` and `can_submit_dossier` require the corresponding permission, valid metadata, ownership, and exact `DRAFT` status. Rejected records remain readable to their owner but are terminal and cannot be changed through these helpers. Released and DOOM_LEVEL content cannot be changed through them.
 - `can_view_incident` requires `incidents.read_own` and ownership.
 
 These helpers prepare future workflows. Task2.2 adds no dossier mutation or incident endpoints; test-only probe routes verify ownership and identifier manipulation using isolated databases.
