@@ -4,8 +4,13 @@
 <header class="admin-header">
   <p class="admin-brand">DoomVault / Administration</p>
   <nav aria-label="Administration navigation">
-    <a href="{{ url_for('admin.index') }}">Overview</a>
-    <a href="{{ url_for('admin.users') }}">Users</a>
+    {% if can_manage_users %}
+      <a href="{{ url_for('admin.index') }}">Overview</a>
+      <a href="{{ url_for('admin.users') }}">Users</a>
+    {% endif %}
+    {% if can_manage_security %}
+      <a href="{{ url_for('admin.security') }}">Security settings</a>
+    {% endif %}
     <a href="{{ url_for('auth.home') }}">Return to DoomVault</a>
   </nav>
 </header>
