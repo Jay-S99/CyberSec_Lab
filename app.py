@@ -33,6 +33,7 @@ def create_app(config_class=Config):
         return {
             "can_manage_users": has_permission("users.manage"),
             "can_manage_security": has_permission("security.manage"),
+            "can_create_dossier": has_permission("dossiers.create"),
         }
 
     @application.get("/health")

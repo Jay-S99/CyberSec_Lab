@@ -12,7 +12,7 @@ The application is designed to demonstrate core application-security controls:
 - Password security, including hashing and a password policy
 - Session management
 
-Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, and Task3.2 security policy management are implemented. Read-only dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Authorized administrators can manage account lifecycles, password policy, the forbidden-word dictionary, password validity, and session inactivity through protected interfaces. Dossier editing remains planned for Task4.1.
+Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, Task3.2 security policy management, and Task4.1 dossier management are implemented. Dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Authorized editors can search the permitted archive, create controlled draft records, and edit only drafts they own. Authorized administrators can manage account lifecycles and security policy without receiving implicit dossier access.
 
 ## Technology stack
 
@@ -48,6 +48,12 @@ Implemented:
 - Database-backed permission checks and reusable login/permission decorators
 - Ownership policies for dossier editing/submission and private incident reading
 - Read-only dossier detail and filtered archive endpoints
+- Server-side dossier search and organization, classification, and status filters
+- Editor-only dossier creation with server-assigned identifiers, ownership, and draft status
+- Ownership-protected editing of draft dossier content
+- Validated UTF-8 JSON storage with bounded documents and atomic file replacement
+- Coordinated SQLite/JSON persistence with compensating cleanup and restoration
+- Sanitized dossier creation and update security events
 - Classification and lifecycle checks, with additional DOOM_LEVEL permission
 - A protected administrator dashboard with live account counts
 - User listing, username search, role/status filters, account creation, and editing
@@ -66,7 +72,7 @@ Implemented:
 
 Not implemented yet:
 
-- Dossier creation, editing, submission, approval, and declassification workflows
+- Dossier submission, approval, rejection, and declassification workflows
 - Incident submission and reading interfaces
 - Advanced session administration
 - Advanced page design and the language switcher
@@ -169,6 +175,20 @@ For an existing Task2.1 database, run `flask --app app init-db` followed by `fla
 
 See [docs/rbac.md](docs/rbac.md) for all thirteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
 
+## Dossier management (Task4.1)
+
+`GET /dossiers` is the central registry. Search matches partial dossier IDs and titles; organization, classification, and status filters can be combined. Filtering is performed on the server, and every candidate is passed through the existing Task2.2 authorization policy before its metadata is returned. Invalid or repeated filter values receive HTTP 400 without disclosing hidden records. The registry displays stable `updated_at` values and never returns file names, owners, approvers, or filesystem paths.
+
+Editors with `dossiers.create` can use `GET` and `POST /dossiers/new`. The backend accepts only `INTERNAL` and `SECRET` authoring classifications, always assigns `DRAFT`, derives ownership from the authenticated session, and generates the next available `DV-XXX` identifier under an immediate SQLite write transaction. Client-supplied IDs, owners, approvers, statuses, and timestamps are ignored. Other roles, including administrators, receive no implicit creation access.
+
+Editors with `dossiers.edit_own` can use `GET` and `POST /dossiers/<id>/edit` only for a `DRAFT` they own. IDs, ownership, approval fields, status, and creation time remain immutable. The form carries the last update timestamp so a stale page cannot silently overwrite a newer edit. Approved, pending, rejected, declassified, other-user, and DOOM_LEVEL records cannot be changed through this route.
+
+SQLite remains authoritative for authorization metadata. JSON files contain the matching display content and stay outside `static/`. File names must exactly match `DV-XXX.json`; absolute paths, traversal, and symbolic-link files are rejected. Documents are size-bounded and validated before UTF-8 serialization. Writes use a temporary file in the storage directory and an atomic publication or replacement step. Creation removes the file if its database transaction fails; editing retains the prior bytes and restores them if metadata or event persistence fails.
+
+Successful creation and editing record `dossier_created` or `dossier_updated` in `security_events` with only the actor ID and dossier ID. Summaries, observations, credentials, session identifiers, and filesystem paths are not logged. Missing dossiers and invalid document references return HTTP 404; existing but unauthorized records return the existing generic HTTP 403 response.
+
+See [docs/dossier_management.md](docs/dossier_management.md) for the JSON structure, endpoint behavior, storage guarantees, automated coverage, and a concise manual walkthrough. Approval, declassification, and incident workflows remain deferred to Task4.2.
+
 ## User management (Task3.1)
 
 Open `/admin` after signing in with a fully established account that has `users.manage`. The initial role mapping grants this permission only to administrators. Every administrative route checks it on the backend; neither the username `ADMIN` nor a visible navigation link grants access. Unauthenticated browser requests redirect to login, and authenticated users without permission receive HTTP 403.
@@ -205,7 +225,7 @@ From the repository root, with the virtual environment activated:
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. Security-policy tests cover independent RBAC, CSRF, strict bounds, mass-assignment resistance, Unicode dictionary CRUD, live password/session enforcement, durable deletions, transactional audit logging, and secret-free output. The symbolic-link test is skipped on hosts that do not permit creating links.
+Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. Dossier-management tests cover authorization-preserving search, strict filters, creation permissions, classification limits, server-controlled metadata, CSRF, owned-draft editing, stale updates, HTML escaping, event secrecy, and database/filesystem rollback behavior. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. Security-policy tests cover independent RBAC, CSRF, strict bounds, mass-assignment resistance, Unicode dictionary CRUD, live password/session enforcement, durable deletions, transactional audit logging, and secret-free output. The symbolic-link test is skipped on hosts that do not permit creating links.
 
 ## Project structure
 
@@ -223,12 +243,13 @@ docs/authorization.md   Task2.2 policy, protected endpoints, and verification
 docs/task2.2-report.md  Task2.2 delivery report and validation results
 docs/user_management.md Task3.1 account lifecycle, administrator interface, and verification
 docs/security_policies.md Task3.2 security settings, enforcement, audit behavior, and verification
+docs/dossier_management.md Task4.1 registry, authoring, storage, and verification
 requirements.txt        Pinned direct dependencies
 data/dossiers/          Fictional dossier JSON files
 data/wordlist.txt       Wordlist used for temporary passwords
 auth/                   Password hashing, policy, login, and sessions
 security/               CSRF, authorization policies, error responses, security logging
-modules/                Protected user-management routes and read-only dossiers
+modules/                Protected administration, dossier routes, and dossier services
 locales/                Reserved for future English and Polish translations
 templates/              Authentication, archive/detail, user administration, and 403 pages
 static/                 Shared authentication and administration stylesheet
@@ -240,7 +261,7 @@ Authorization helpers under `security/` are reusable by future workflow endpoint
 
 ## Planned features
 
-- Dossier authoring, review, and declassification workflows
+- Dossier submission, review, and declassification workflows
 - Incident submission and private report interfaces
 - Advanced session administration
 - A lightweight translation layer with English as the default language and Polish as a second language

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} - DoomVault{% endblock %}
+{% block body_class %}dossier-page{% endblock %}
+{% block content %}
+<header class="dossier-header">
+  <div>
+    <p class="dossier-kicker">Authorized editor workspace</p>
+    <h1>{{ heading }}</h1>
+    <p>Draft ownership, status, and approval metadata are assigned by the server.</p>
+  </div>
+</header>
+
+{% if errors %}
+  <div role="alert">
+    {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+
+<form class="dossier-form" method="post" action="{% if dossier %}{{ url_for('dossiers.edit', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.create') }}{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% if dossier %}<input type="hidden" name="updated_at" value="{{ values.updated_at }}">{% endif %}
+
+  <label for="title">Title
+    <input id="title" name="title" maxlength="{{ limits.TITLE_MAX_LENGTH }}" required value="{{ values.title or '' }}">
+  </label>
+
+  <div class="dossier-form-grid">
+    <label for="organization">Organization
+      <select id="organization" name="organization" required>
+        {% for option in organizations %}
+          <option value="{{ option }}"{% if values.organization == option %} selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="classification">Classification
+      <select id="classification" name="classification" required>
+        {% for option in classifications %}
+          <option value="{{ option }}"{% if values.classification == option %} selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="location">Location
+      <input id="location" name="location" maxlength="{{ limits.LOCATION_MAX_LENGTH }}" required value="{{ values.location or '' }}">
+    </label>
+    <label for="threat_level">Threat level
+      <select id="threat_level" name="threat_level" required>
+        {% for option in threat_levels %}
+          <option value="{{ option }}"{% if values.threat_level == option %} selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <label for="summary">Summary
+    <textarea id="summary" name="summary" maxlength="{{ limits.SUMMARY_MAX_LENGTH }}" rows="7" required>{{ values.summary or '' }}</textarea>
+  </label>
+  <label for="observations">Observations <span class="dossier-help">one per line</span>
+    <textarea id="observations" name="observations" rows="7" required>{{ values.observations or '' }}</textarea>
+  </label>
+  <label for="conclusion">Conclusion
+    <textarea id="conclusion" name="conclusion" maxlength="{{ limits.CONCLUSION_MAX_LENGTH }}" rows="5" required>{{ values.conclusion or '' }}</textarea>
+  </label>
+
+  <div class="dossier-form-actions">
+    <button type="submit">{{ submit_label }}</button>
+    <a href="{% if dossier %}{{ url_for('dossiers.detail', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.index') }}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

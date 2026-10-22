@@ -52,6 +52,27 @@ def record_security_configuration_event(
     )
 
 
+def record_dossier_event(connection, actor_id, dossier_id, event_type, now):
+    descriptions = {
+        "dossier_created": "Dossier created",
+        "dossier_updated": "Dossier updated",
+    }
+    if event_type not in descriptions:
+        raise ValueError("Unsupported dossier event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            actor_id,
+            event_type,
+            f"{descriptions[event_type]}; dossier_id={dossier_id}.",
+            format_utc(now),
+        ),
+    )
+
+
 def record_session_event(connection, user_id, event_type, now):
     descriptions = {
         "session_created": "Authenticated session created.",
