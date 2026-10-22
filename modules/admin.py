@@ -6,7 +6,7 @@ from werkzeug.exceptions import Forbidden, NotFound
 
 from auth.login import _render as render_secure_template
 from database import get_db
-from modules import user_management
+from modules import security_settings, user_management
 from security.csrf import csrf_tokens_match
 from security.permissions import require_permission
 
@@ -19,6 +19,13 @@ NOTICES = {
     "blocked": "Account blocked. Existing sessions have been revoked.",
     "unblocked": "Account unblocked. Credential validity has not changed.",
     "deleted": "Account deleted from active use. Historical records are preserved.",
+    "forbidden-policy-saved": "Forbidden-word policy setting saved.",
+    "minimum-length-saved": "Minimum password length saved.",
+    "password-validity-saved": "Password validity setting saved.",
+    "session-timeout-saved": "Session inactivity timeout saved.",
+    "word-added": "Forbidden word added.",
+    "word-updated": "Forbidden word updated.",
+    "word-deleted": "Forbidden word deleted.",
 }
 
 
@@ -27,6 +34,18 @@ def require_csrf(view):
     def wrapped(*args, **kwargs):
         if not csrf_tokens_match():
             raise user_management.UserManagementError(
+                "Invalid request. Reload the form and try again."
+            )
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def require_security_csrf(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not csrf_tokens_match():
+            raise security_settings.SecuritySettingsError(
                 "Invalid request. Reload the form and try again."
             )
         return view(*args, **kwargs)
@@ -72,6 +91,47 @@ def _redirect_users(notice):
     return redirect(url_for("admin.users", notice=notice), code=303)
 
 
+def _render_security(*, errors=(), field_errors=None, status=200):
+    return render_secure_template(
+        "admin/security.html",
+        status=status,
+        errors=errors,
+        field_errors=field_errors or {},
+        notice=NOTICES.get(request.args.get("notice")),
+        settings=security_settings.current_settings(get_db()),
+        minimum_password_length=security_settings.MINIMUM_PASSWORD_LENGTH,
+        maximum_password_length=(
+            security_settings.MAXIMUM_CONFIGURED_PASSWORD_LENGTH
+        ),
+        maximum_password_validity_days=(
+            security_settings.MAXIMUM_PASSWORD_VALIDITY_DAYS
+        ),
+        maximum_session_timeout_minutes=(
+            security_settings.MAXIMUM_SESSION_TIMEOUT_MINUTES
+        ),
+    )
+
+
+def _render_forbidden_words(*, errors=(), status=200):
+    return render_secure_template(
+        "admin/forbidden_words.html",
+        status=status,
+        errors=errors,
+        notice=NOTICES.get(request.args.get("notice")),
+        words=security_settings.list_forbidden_words(get_db()),
+        new_word=request.form.get("word", "") if request.method == "POST" else "",
+        maximum_word_length=security_settings.MAXIMUM_FORBIDDEN_WORD_LENGTH,
+    )
+
+
+def _redirect_security(notice):
+    return redirect(url_for("admin.security", notice=notice), code=303)
+
+
+def _redirect_forbidden_words(notice):
+    return redirect(url_for("admin.forbidden_words", notice=notice), code=303)
+
+
 @bp.errorhandler(user_management.UserManagementError)
 def handle_user_management_error(error):
     if error.status == 404:
@@ -90,10 +150,29 @@ def handle_user_management_error(error):
     return _render_users(errors=errors, status=400)
 
 
+@bp.errorhandler(security_settings.SecuritySettingsError)
+def handle_security_settings_error(error):
+    if error.status == 404:
+        return current_app.handle_http_exception(NotFound())
+    if error.status == 403:
+        g.authorization_operation = "security.manage"
+        return current_app.handle_http_exception(Forbidden())
+    if request.endpoint in {
+        "admin.forbidden_words",
+        "admin.edit_forbidden_word",
+        "admin.delete_forbidden_word",
+    }:
+        return _render_forbidden_words(errors=(str(error),), status=400)
+    field_errors = {error.field: str(error)} if error.field else {}
+    return _render_security(
+        errors=(str(error),), field_errors=field_errors, status=400
+    )
+
+
 @bp.errorhandler(sqlite3.Error)
 def handle_database_error(_error):
-    current_app.logger.error("User administration could not be completed.")
-    return "User administration is temporarily unavailable. Please try again.", 503
+    current_app.logger.error("Administration operation could not be completed.")
+    return "Administration is temporarily unavailable. Please try again.", 503
 
 
 @bp.get("")
@@ -188,3 +267,108 @@ def reset_password(user_id):
         get_db(), g.user["id"], g.session_token, user_id
     )
     return _credential_response(user_id, credential)
+
+
+@bp.get("/security")
+@require_permission("security.manage")
+def security():
+    return _render_security()
+
+
+@bp.post("/security/forbidden-policy")
+@require_permission("security.manage")
+@require_security_csrf
+def update_forbidden_policy():
+    security_settings.set_forbidden_words_enabled(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("forbidden_words_enabled", ""),
+    )
+    return _redirect_security("forbidden-policy-saved")
+
+
+@bp.post("/security/minimum-password-length")
+@require_permission("security.manage")
+@require_security_csrf
+def update_minimum_password_length():
+    security_settings.set_minimum_password_length(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("minimum_password_length", ""),
+    )
+    return _redirect_security("minimum-length-saved")
+
+
+@bp.post("/security/password-validity")
+@require_permission("security.manage")
+@require_security_csrf
+def update_password_validity():
+    security_settings.set_password_validity_days(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("password_validity_days", ""),
+    )
+    return _redirect_security("password-validity-saved")
+
+
+@bp.post("/security/session-timeout")
+@require_permission("security.manage")
+@require_security_csrf
+def update_session_timeout():
+    security_settings.set_session_timeout_minutes(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("session_inactivity_timeout_minutes", ""),
+    )
+    return _redirect_security("session-timeout-saved")
+
+
+@bp.route("/security/forbidden-words", methods=["GET", "POST"])
+@require_permission("security.manage")
+def forbidden_words():
+    if request.method == "GET":
+        return _render_forbidden_words()
+    return _add_forbidden_word()
+
+
+@require_security_csrf
+def _add_forbidden_word():
+    security_settings.add_forbidden_word(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("word", ""),
+    )
+    return _redirect_forbidden_words("word-added")
+
+
+@bp.post("/security/forbidden-words/<int:word_id>/edit")
+@require_permission("security.manage")
+@require_security_csrf
+def edit_forbidden_word(word_id):
+    security_settings.update_forbidden_word(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        word_id,
+        request.form.get("word", ""),
+    )
+    return _redirect_forbidden_words("word-updated")
+
+
+@bp.post("/security/forbidden-words/<int:word_id>/delete")
+@require_permission("security.manage")
+@require_security_csrf
+def delete_forbidden_word(word_id):
+    if request.form.get("confirm_delete") != "yes":
+        raise security_settings.SecuritySettingsError(
+            "Confirm forbidden-word deletion first."
+        )
+    security_settings.delete_forbidden_word(
+        get_db(), g.user["id"], g.session_token, word_id
+    )
+    return _redirect_forbidden_words("word-deleted")
