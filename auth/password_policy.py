@@ -7,6 +7,13 @@ from auth.passwords import MAX_PASSWORD_LENGTH, verify_password
 from database import parse_utc
 
 
+MINIMUM_PASSWORD_LENGTH = 14
+MAXIMUM_CONFIGURED_PASSWORD_LENGTH = 128
+MAXIMUM_PASSWORD_VALIDITY_DAYS = 3650
+MAXIMUM_SESSION_TIMEOUT_MINUTES = 1440
+TEMPORARY_PASSWORD_VALIDITY_HOURS = 12
+
+
 class PolicyViolation:
     def __init__(self, code, **params):
         self.code = code
@@ -31,11 +38,28 @@ class PolicyResult:
 def normalize_for_comparison(value):
     if not isinstance(value, str):
         return ""
-    return unicodedata.normalize("NFKC", value).casefold()
+    normalized = unicodedata.normalize("NFKD", value).casefold()
+    without_marks = "".join(
+        character
+        for character in normalized
+        if not unicodedata.combining(character)
+    )
+    return without_marks.translate(str.maketrans({"ł": "l"}))
+
+
+def normalize_forbidden_word(value):
+    if not isinstance(value, str):
+        return ""
+    return unicodedata.normalize("NFKC", value.strip()).casefold()
 
 
 def minimum_password_length(connection):
-    return _positive_int(_setting(connection, "minimum_password_length"), 14)
+    return _bounded_int(
+        _setting(connection, "minimum_password_length"),
+        MINIMUM_PASSWORD_LENGTH,
+        MINIMUM_PASSWORD_LENGTH,
+        MAXIMUM_CONFIGURED_PASSWORD_LENGTH,
+    )
 
 
 def forbidden_words_enabled(connection):
@@ -46,9 +70,11 @@ def forbidden_words_enabled(connection):
 
 
 def temporary_password_hours(connection):
-    return _positive_int(
+    return _bounded_int(
         _setting(connection, "temporary_password_validity_hours"),
-        12,
+        TEMPORARY_PASSWORD_VALIDITY_HOURS,
+        1,
+        TEMPORARY_PASSWORD_VALIDITY_HOURS,
     )
 
 
@@ -57,15 +83,21 @@ def password_history_limit(connection):
 
 
 def password_validity_days(connection):
-    return _non_negative_int(_setting(connection, "password_validity_days"), 0)
+    return _bounded_int(
+        _setting(connection, "password_validity_days"),
+        0,
+        0,
+        MAXIMUM_PASSWORD_VALIDITY_DAYS,
+    )
 
 
 def session_timeout_minutes(connection):
-    minutes = _positive_int(
+    return _bounded_int(
         _setting(connection, "session_inactivity_timeout_minutes"),
         15,
+        1,
+        MAXIMUM_SESSION_TIMEOUT_MINUTES,
     )
-    return minutes if minutes <= 365 * 24 * 60 else 15
 
 
 def password_expired(password_changed_at, validity_days, now):
@@ -179,16 +211,16 @@ def _setting(connection, key):
     return row["value"]
 
 
-def _positive_int(value, default):
+def _non_negative_int(value, default):
     parsed = _parse_int(value)
-    if parsed is None or parsed < 1:
+    if parsed is None or parsed < 0:
         return default
     return parsed
 
 
-def _non_negative_int(value, default):
+def _bounded_int(value, default, minimum, maximum):
     parsed = _parse_int(value)
-    if parsed is None or parsed < 0:
+    if parsed is None or not minimum <= parsed <= maximum:
         return default
     return parsed
 
