@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS permissions (
             'dossiers.review',
             'dossiers.declassify',
             'incidents.create',
-            'incidents.read_own'
+            'incidents.read_own',
+            'incidents.read_submitted'
         )
     ),
     description TEXT NOT NULL CHECK (length(trim(description)) > 0)
@@ -132,10 +133,21 @@ CREATE TABLE IF NOT EXISTS dossiers (
     file_name TEXT NOT NULL UNIQUE CHECK (file_name = id || '.json'),
     created_by INTEGER,
     approved_by INTEGER,
+    source_incident_id INTEGER,
+    submitted_at TEXT,
+    reviewed_at TEXT,
+    rejection_reason TEXT CHECK (
+        rejection_reason IS NULL OR length(trim(rejection_reason)) > 0
+    ),
+    declassified_by INTEGER,
+    declassified_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
-    FOREIGN KEY (approved_by) REFERENCES users (id) ON DELETE RESTRICT
+    FOREIGN KEY (approved_by) REFERENCES users (id) ON DELETE RESTRICT,
+    FOREIGN KEY (source_incident_id) REFERENCES incident_reports (id)
+        ON DELETE RESTRICT,
+    FOREIGN KEY (declassified_by) REFERENCES users (id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS incident_reports (
@@ -170,7 +182,10 @@ CREATE INDEX IF NOT EXISTS idx_dossiers_organization ON dossiers (organization);
 CREATE INDEX IF NOT EXISTS idx_dossiers_classification ON dossiers (classification);
 CREATE INDEX IF NOT EXISTS idx_dossiers_status ON dossiers (status);
 CREATE INDEX IF NOT EXISTS idx_dossiers_created_by ON dossiers (created_by);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_source_incident
+    ON dossiers (source_incident_id) WHERE source_incident_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_incident_reports_created_by ON incident_reports (created_by);
+CREATE INDEX IF NOT EXISTS idx_incident_reports_status ON incident_reports (status);
 CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_security_events_event_type ON security_events (event_type);
 CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events (created_at);

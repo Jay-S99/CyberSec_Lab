@@ -90,14 +90,14 @@ def _table_exists(connection, table_name):
 
 
 def _column_names(connection, table_name):
-    if table_name not in {"users", "sessions"}:
+    if table_name not in {"users", "sessions", "dossiers"}:
         raise ValueError("Unsupported table for schema inspection.")
     rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
     return {row["name"] for row in rows}
 
 
 def apply_schema_updates(connection):
-    """Add account lifecycle and session columns to older databases."""
+    """Add nullable lifecycle columns to older databases without losing rows."""
     changed = False
     if _table_exists(connection, "users"):
         user_columns = _column_names(connection, "users")
@@ -142,6 +142,28 @@ def apply_schema_updates(connection):
                 """
             )
             changed = True
+    if _table_exists(connection, "dossiers"):
+        dossier_columns = _column_names(connection, "dossiers")
+        additions = (
+            (
+                "source_incident_id",
+                "INTEGER REFERENCES incident_reports (id) ON DELETE RESTRICT",
+            ),
+            ("submitted_at", "TEXT"),
+            ("reviewed_at", "TEXT"),
+            ("rejection_reason", "TEXT"),
+            (
+                "declassified_by",
+                "INTEGER REFERENCES users (id) ON DELETE RESTRICT",
+            ),
+            ("declassified_at", "TEXT"),
+        )
+        for column_name, definition in additions:
+            if column_name not in dossier_columns:
+                connection.execute(
+                    f"ALTER TABLE dossiers ADD COLUMN {column_name} {definition}"
+                )
+                changed = True
     if changed:
         connection.commit()
 
@@ -182,6 +204,7 @@ def close_db(_exception=None):
 
 def init_db():
     connection = get_db()
+    apply_schema_updates(connection)
     with open(SCHEMA_PATH, encoding="utf-8") as schema_file:
         schema_sql = schema_file.read()
     connection.executescript(schema_sql)
@@ -190,15 +213,18 @@ def init_db():
 
 def _upgrade_authorization_schema(connection, schema_sql):
     tables = []
-    for table_name, required_value in (
-        ("permissions", "dossiers.read_doom_level"),
-        ("dossiers", "PENDING"),
+    for table_name, required_values in (
+        (
+            "permissions",
+            ("dossiers.read_doom_level", "incidents.read_submitted"),
+        ),
+        ("dossiers", ("PENDING",)),
     ):
         row = connection.execute(
             "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
             (table_name,),
         ).fetchone()
-        if required_value not in row["sql"]:
+        if any(value not in row["sql"] for value in required_values):
             tables.append(table_name)
     if not tables:
         return
@@ -228,7 +254,7 @@ def _upgrade_authorization_schema(connection, schema_sql):
                     f"PRAGMA table_info({temporary_name})"
                 )
             ]
-            if old_columns != new_columns:
+            if set(old_columns) != set(new_columns):
                 raise RuntimeError("Unexpected authorization schema columns.")
             dependent_sql = [
                 row["sql"] for row in connection.execute(
@@ -240,8 +266,10 @@ def _upgrade_authorization_schema(connection, schema_sql):
                     (table_name,),
                 )
             ]
+            column_list = ", ".join(new_columns)
             connection.execute(
-                f"INSERT INTO {temporary_name} SELECT * FROM {table_name}"
+                f"INSERT INTO {temporary_name} ({column_list}) "
+                f"SELECT {column_list} FROM {table_name}"
             )
             connection.execute(f"DROP TABLE {table_name}")
             connection.execute(
