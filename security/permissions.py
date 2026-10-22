@@ -169,7 +169,7 @@ def _can_change_owned_dossier(dossier, permission):
     return (
         _valid_dossier(dossier)
         and dossier["classification"] not in {"DECLASSIFIED", "DOOM_LEVEL"}
-        and dossier["status"] in WORKING_STATUSES
+        and dossier["status"] == "DRAFT"
         and has_permission(permission)
         and is_resource_owner(dossier)
     )
@@ -185,3 +185,29 @@ def can_submit_dossier(dossier):
 
 def can_view_incident(incident):
     return has_permission("incidents.read_own") and is_resource_owner(incident)
+
+
+def can_review_incident(incident):
+    return (
+        _field(incident, "status") in {"NEW", "PROCESSED"}
+        and has_permission("incidents.read_submitted")
+    )
+
+
+def can_review_dossier(dossier):
+    return (
+        _valid_dossier(dossier)
+        and dossier["status"] == "PENDING"
+        and has_permission("dossiers.review")
+        and can_access_dossier(dossier)
+    )
+
+
+def can_declassify_dossier(dossier):
+    return (
+        _valid_dossier(dossier)
+        and dossier["status"] == "APPROVED"
+        and dossier["classification"] != "DOOM_LEVEL"
+        and has_permission("dossiers.declassify")
+        and can_access_dossier(dossier)
+    )

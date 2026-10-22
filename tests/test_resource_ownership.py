@@ -16,10 +16,9 @@ def test_invalid_ownership_never_grants_access(app, client, authorize_as, owner)
 
 
 @pytest.mark.parametrize("operation", ["edit", "submit"])
-@pytest.mark.parametrize("status", ["DRAFT", "REJECTED"])
 def test_editor_can_only_change_owned_working_dossiers(
     app, client, authorize_as, authorization_accounts, resource_probe,
-    operation, status,
+    operation,
 ):
     with app.app_context():
         connection = get_db()
@@ -28,12 +27,30 @@ def test_editor_can_only_change_owned_working_dossiers(
             UPDATE dossiers SET classification = 'SECRET', status = ?,
                 created_by = ? WHERE id = 'DV-003'
             """,
-            (status, authorization_accounts["editor01"]),
+            ("DRAFT", authorization_accounts["editor01"]),
         )
         connection.commit()
     authorize_as("editor01")
     assert client.get(f"/test/owned-dossiers/DV-003/{operation}").status_code == 200
     authorize_as("editor02")
+    assert client.get(f"/test/owned-dossiers/DV-003/{operation}").status_code == 403
+
+
+@pytest.mark.parametrize("operation", ["edit", "submit"])
+def test_rejected_dossiers_are_terminal_for_ordinary_editor_actions(
+    app, client, authorize_as, authorization_accounts, resource_probe, operation
+):
+    with app.app_context():
+        connection = get_db()
+        connection.execute(
+            """
+            UPDATE dossiers SET classification = 'SECRET', status = 'REJECTED',
+                created_by = ? WHERE id = 'DV-003'
+            """,
+            (authorization_accounts["editor01"],),
+        )
+        connection.commit()
+    authorize_as("editor01")
     assert client.get(f"/test/owned-dossiers/DV-003/{operation}").status_code == 403
 
 
@@ -53,7 +70,9 @@ def test_other_roles_cannot_edit_or_submit_even_owned_drafts(
         assert client.get(f"/test/owned-dossiers/DV-003/{operation}").status_code == 403
 
 
-@pytest.mark.parametrize("status", ["PENDING", "SUBMITTED", "APPROVED", "DECLASSIFIED"])
+@pytest.mark.parametrize(
+    "status", ["REJECTED", "PENDING", "SUBMITTED", "APPROVED", "DECLASSIFIED"]
+)
 def test_editor_cannot_change_a_nonworking_dossier(
     app, client, authorize_as, authorization_accounts, resource_probe, status
 ):
