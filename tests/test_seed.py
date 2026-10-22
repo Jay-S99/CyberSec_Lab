@@ -53,6 +53,7 @@ EXPECTED_SETTINGS = {
     "password_history_limit": "5",
     "session_inactivity_timeout_minutes": "15",
     "password_validity_days": "0",
+    "forbidden_words_seed_version": "1",
 }
 
 EXPECTED_FORBIDDEN_WORDS = {
@@ -310,7 +311,7 @@ def test_seed_twice_does_not_create_duplicates(seeded_app):
         "permissions": 13,
         "role_permissions": 16,
         "users": 8,
-        "settings": 6,
+        "settings": 7,
         "forbidden_words": len(EXPECTED_FORBIDDEN_WORDS),
         "dossiers": 8,
     }
@@ -350,6 +351,44 @@ def test_repeated_seed_preserves_modified_settings(seeded_app):
     assert "customtoken" in words
     assert "hydra" in words
     assert len(words) == len(EXPECTED_FORBIDDEN_WORDS) + 1
+
+
+def test_repeated_seed_does_not_restore_deleted_forbidden_words(seeded_app):
+    with seeded_app.app_context():
+        connection = get_db()
+        connection.execute("DELETE FROM forbidden_words")
+        connection.commit()
+
+        seed_database()
+
+        count = connection.execute(
+            "SELECT COUNT(*) AS total FROM forbidden_words"
+        ).fetchone()["total"]
+
+    assert count == 0
+
+
+def test_upgrade_marker_preserves_an_already_empty_dictionary(seeded_app):
+    with seeded_app.app_context():
+        connection = get_db()
+        connection.execute("DELETE FROM forbidden_words")
+        connection.execute(
+            "DELETE FROM settings WHERE key = 'forbidden_words_seed_version'"
+        )
+        connection.commit()
+
+        seed_database()
+
+        count = connection.execute(
+            "SELECT COUNT(*) AS total FROM forbidden_words"
+        ).fetchone()["total"]
+        marker = connection.execute(
+            "SELECT value FROM settings "
+            "WHERE key = 'forbidden_words_seed_version'"
+        ).fetchone()
+
+    assert count == 0
+    assert marker["value"] == "1"
 
 
 def test_repeated_seed_preserves_account_state(seeded_app):
