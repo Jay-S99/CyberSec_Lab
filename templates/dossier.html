@@ -1,16 +1,51 @@
 {% extends "base.html" %}
 {% block title %}{{ dossier.id }} - DoomVault{% endblock %}
+{% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<h1>{{ dossier.id }}: {{ dossier.title }}</h1>
-<p>{{ dossier.organization }} / {{ dossier.classification }} / {{ dossier.status }}</p>
-<h2>{{ dossier.incident.location }}</h2>
-<p>Threat level: {{ dossier.incident.threat_level }}</p>
-<p>{{ dossier.incident.summary }}</p>
-<ul>
-{% for observation in dossier.incident.observations %}
-  <li>{{ observation }}</li>
-{% endfor %}
-</ul>
-<p>{{ dossier.incident.conclusion }}</p>
-<p><a href="{{ url_for('dossiers.index') }}">Return to authorized dossiers</a></p>
+<header class="dossier-header">
+  <div>
+    <p class="dossier-kicker">Intelligence dossier {{ dossier.id }}</p>
+    <h1>{{ dossier.title }}</h1>
+  </div>
+  {% if can_edit %}
+    <a class="dossier-button" href="{{ url_for('dossiers.edit', dossier_id=dossier.id) }}">Edit draft</a>
+  {% endif %}
+</header>
+
+{% if notice %}<p role="status">{{ notice }}</p>{% endif %}
+
+<dl class="dossier-metadata">
+  <div><dt>Organization</dt><dd>{{ dossier.organization }}</dd></div>
+  <div><dt>Classification</dt><dd><span class="dossier-badge dossier-classification">{{ dossier.classification }}</span></dd></div>
+  <div><dt>Status</dt><dd><span class="dossier-badge">{{ dossier.status }}</span></dd></div>
+  {% if dossier.incident.location %}<div><dt>Location</dt><dd>{{ dossier.incident.location }}</dd></div>{% endif %}
+  {% if dossier.incident.threat_level %}<div><dt>Threat level</dt><dd>{{ dossier.incident.threat_level }}</dd></div>{% endif %}
+</dl>
+
+{% if dossier.incident.summary %}
+  <section class="dossier-section">
+    <h2>Summary</h2>
+    <p>{{ dossier.incident.summary }}</p>
+  </section>
+{% endif %}
+
+{% if dossier.incident.observations %}
+  <section class="dossier-section">
+    <h2>Observations</h2>
+    <ul>
+    {% for observation in dossier.incident.observations %}
+      <li>{{ observation }}</li>
+    {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+{% if dossier.incident.conclusion %}
+  <section class="dossier-section">
+    <h2>Conclusion</h2>
+    <p>{{ dossier.incident.conclusion }}</p>
+  </section>
+{% endif %}
+
+<p><a href="{{ url_for('dossiers.index') }}">Return to dossier registry</a></p>
 {% endblock %}

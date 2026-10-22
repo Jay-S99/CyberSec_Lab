@@ -1,13 +1,89 @@
 {% extends "base.html" %}
-{% block title %}Dossiers - DoomVault{% endblock %}
+{% block title %}Dossier registry - DoomVault{% endblock %}
+{% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<h1>Authorized Dossiers</h1>
-<ul>
-{% for dossier in dossiers %}
-  <li><a href="{{ url_for('dossiers.detail', dossier_id=dossier.id) }}">{{ dossier.id }}: {{ dossier.title }}</a> — {{ dossier.classification }} / {{ dossier.status }}</li>
+<header class="dossier-header">
+  <div>
+    <p class="dossier-kicker">DoomVault intelligence archive</p>
+    <h1>Dossier registry</h1>
+    <p>Only records authorized for your current clearance are shown.</p>
+  </div>
+  {% if can_create %}
+    <a class="dossier-button" href="{{ url_for('dossiers.create') }}">Create dossier</a>
+  {% endif %}
+</header>
+
+{% if errors %}
+  <div role="alert">
+    {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+
+<form class="dossier-filters" method="get" action="{{ url_for('dossiers.index') }}">
+  <label for="search">Search by ID or title
+    <input id="search" name="search" type="search" maxlength="{{ search_max_length }}" value="{{ filters.search }}">
+  </label>
+  <label for="organization">Organization
+    <select id="organization" name="organization">
+      <option value="">All organizations</option>
+      {% for option in organizations %}
+        <option value="{{ option }}"{% if filters.organization == option %} selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label for="classification">Classification
+    <select id="classification" name="classification">
+      <option value="">All classifications</option>
+      {% for option in classifications %}
+        <option value="{{ option }}"{% if filters.classification == option %} selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label for="status">Status
+    <select id="status" name="status">
+      <option value="">All statuses</option>
+      {% for option in statuses %}
+        <option value="{{ option }}"{% if filters.status == option %} selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="dossier-filter-actions">
+    <button type="submit">Apply</button>
+    <a href="{{ url_for('dossiers.index') }}">Clear</a>
+  </div>
+</form>
+
+{% if dossiers %}
+  <div class="dossier-table-scroll">
+    <table class="dossier-table">
+      <caption>{{ dossiers|length }} authorized dossier{% if dossiers|length != 1 %}s{% endif %}</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Title</th>
+          <th scope="col">Organization</th>
+          <th scope="col">Classification</th>
+          <th scope="col">Status</th>
+          <th scope="col">Last update</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for dossier in dossiers %}
+        <tr>
+          <th scope="row"><a href="{{ url_for('dossiers.detail', dossier_id=dossier.id) }}">{{ dossier.id }}</a></th>
+          <td>{{ dossier.title }}</td>
+          <td>{{ dossier.organization }}</td>
+          <td><span class="dossier-badge dossier-classification">{{ dossier.classification }}</span></td>
+          <td><span class="dossier-badge">{{ dossier.status }}</span></td>
+          <td><time datetime="{{ dossier.updated_at }}">{{ dossier.updated_at }}</time></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% else %}
-  <li>No dossiers are available for your current clearance.</li>
-{% endfor %}
-</ul>
+  <p class="dossier-empty">No dossiers match your current clearance and filters.</p>
+{% endif %}
+
 <p><a href="{{ url_for('auth.home') }}">Return to DoomVault</a></p>
 {% endblock %}
