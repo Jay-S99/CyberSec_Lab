@@ -24,6 +24,34 @@ def record_admin_event(connection, actor_id, target_id, event_type, now):
     )
 
 
+def record_security_configuration_event(
+    connection,
+    actor_id,
+    event_type,
+    description,
+    now,
+):
+    allowed_event_types = {
+        "security_setting_changed",
+        "password_policy_enabled",
+        "password_policy_disabled",
+        "forbidden_word_added",
+        "forbidden_word_updated",
+        "forbidden_word_deleted",
+        "password_validity_changed",
+        "session_timeout_changed",
+    }
+    if event_type not in allowed_event_types:
+        raise ValueError("Unsupported security configuration event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (actor_id, event_type, description, format_utc(now)),
+    )
+
+
 def record_session_event(connection, user_id, event_type, now):
     descriptions = {
         "session_created": "Authenticated session created.",
