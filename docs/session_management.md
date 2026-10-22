@@ -10,7 +10,7 @@ An incoming unauthenticated cookie cannot choose the new identifier. Login reche
 
 ## Inactivity and expiration
 
-The timeout lives in the existing `settings` table under `session_inactivity_timeout_minutes`. The seeded value and safe fallback are 15 minutes. Accepted values are positive whole minutes up to 525600 (one year). Missing, malformed, nonpositive, or larger values use the fallback; the bound avoids timestamp and cookie-lifetime overflow from corrupted settings.
+The timeout lives in the existing `settings` table under `session_inactivity_timeout_minutes`. The seeded value and safe fallback are 15 minutes. The Task3.2 administrator interface accepts positive whole minutes up to 1440 (one day). Missing, malformed, nonpositive, or larger stored values use the fallback; the bound avoids unsafe or ineffective inactivity policies.
 
 All lifecycle operations use server-side UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` format. On validation:
 
