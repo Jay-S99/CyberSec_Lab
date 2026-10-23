@@ -1,20 +1,20 @@
 {% extends "admin/base.html" %}
 {% block title %}Edit user - DoomVault{% endblock %}
 {% block admin_content %}
-<h1>Edit {{ user.username }}</h1>
-<p>Account status: <strong>{% if user.account_status == 'pending' %}Pending provisioning{% else %}{{ user.account_status|title }}{% endif %}</strong>. Created {{ user.created_at }} (UTC).</p>
+<div class="page-header"><div><p class="eyebrow">Identity control // Operator record</p><h1>Edit <span>{{ user.username }}</span></h1><p>Account status: <strong>{% if user.account_status == 'pending' %}Pending provisioning{% else %}{{ user.account_status|title }}{% endif %}</strong>. Created {{ user.created_at }} (UTC).</p></div></div>
 {% set locked_username = user.username|upper == 'ADMIN' %}
 {% set locked_role = locked_username or (g.user and g.user.id == user.id) %}
 {% if locked_role %}
   <p id="protected-account-note" class="admin-muted">{% if locked_username %}The permanent ADMIN identity and role are protected.{% else %}You cannot remove your own administrative role.{% endif %}</p>
 {% endif %}
-<form class="admin-account-form" method="post" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+<form class="form-panel admin-account-form" method="post" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-section-label"><span>01</span><strong>Operator profile</strong></div>
   {% include "admin/_user_fields.html" %}
   <p class="admin-muted">Security-sensitive changes revoke existing sessions. Account status and password actions are available on the user list.</p>
   <div class="admin-form-actions">
-    <button type="submit">Save changes</button>
-    <a href="{{ url_for('admin.users') }}">Cancel</a>
+    <button class="button button-primary" type="submit">Save changes</button>
+    <a class="button button-ghost" href="{{ url_for('admin.users') }}">Cancel</a>
   </div>
 </form>
 {% endblock %}
