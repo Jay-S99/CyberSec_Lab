@@ -89,6 +89,11 @@ textarea {
   font: inherit;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -206,8 +211,54 @@ a {
   gap: 0.7rem;
   color: var(--muted);
   font-family: var(--font-mono);
+  margin-left: auto;
   text-align: right;
   text-transform: uppercase;
+}
+
+.language-switcher {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.15rem;
+  padding: 0.18rem;
+  margin-left: 1rem;
+  background: #090d13;
+  border: 1px solid var(--border);
+}
+
+.language-switcher button {
+  width: 2.35rem;
+  min-height: 2rem;
+  padding: 0.25rem;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  clip-path: none;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.language-switcher button:hover,
+.language-switcher button.is-active {
+  color: var(--text);
+  background: var(--surface-raised);
+  transform: none;
+}
+
+.language-switcher button.is-active {
+  box-shadow: inset 0 -2px var(--red);
+}
+
+.language-switcher-floating {
+  position: fixed;
+  z-index: 30;
+  top: 1rem;
+  right: 1rem;
+  margin: 0;
+  background: rgb(7 9 13 / 92%);
 }
 
 .header-status small,
@@ -1067,6 +1118,7 @@ input[type="checkbox"] {
 .data-table td {
   padding: 1rem;
   border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
   vertical-align: middle;
 }
 
@@ -2177,8 +2229,9 @@ a.record-id:hover {
 @media (max-width: 62rem) {
   :root { --header-height: 4.5rem; }
 
-  .app-header { padding: 0 1.2rem; }
+  .app-header { gap: 0.65rem; padding: 0 1.2rem; }
   .header-status { display: none; }
+  .language-switcher { margin-left: auto; }
   .nav-toggle { display: block; }
   .app-shell { display: block; }
 
@@ -2248,6 +2301,7 @@ a.record-id:hover {
 @media (max-width: 32rem) {
   .main-content { padding-right: 1rem; padding-left: 1rem; }
   .brand-lockup strong { font-size: 1.05rem; }
+  .language-switcher button { width: 2rem; }
   .brand-mark { width: 2.25rem; height: 2.25rem; font-size: 1rem; }
   .breadcrumbs { overflow: hidden; white-space: nowrap; }
   .metadata-grid { grid-template-columns: 1fr; }
