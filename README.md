@@ -1,102 +1,90 @@
 # DoomVault
 
-DoomVault is an educational cybersecurity web application. It models a fictional classified intelligence archive inspired by organizations from the Marvel Cinematic Universe, including S.H.I.E.L.D., HYDRA, and S.W.O.R.D. The project is built as a public portfolio application for learning secure web development.
+DoomVault is a cybersecurity-focused academic web application that models a
+fictional classified intelligence archive. It demonstrates secure application
+design through authentication, server-side authorization, account
+administration, classified dossier handling, incident reporting, and controlled
+approval workflows.
 
-## Cybersecurity objectives
+The interface uses an original Marvel-inspired visual theme for an unofficial
+educational fan project. DoomVault is not affiliated with Marvel or Disney.
 
-The application is designed to demonstrate core application-security controls:
+## Key features
 
-- Identification of authorized personnel
-- Authentication with securely stored passwords
-- Authorization through role-based access control
-- Password security, including hashing and a password policy
-- Session management
-
-Authentication, Argon2id password storage, temporary credentials, Task2.1 session lifecycle security, Task2.2 backend authorization, Task3.1 user management, Task3.2 security policy management, Task4.1 dossier management, and the Task4.2 incident-to-declassification workflow are implemented. Dossier access enforces explicit permissions, classification, lifecycle state, and ownership. Employees can submit private incidents, editors can convert reports into owned drafts, and managers can review eligible classified records without receiving administration privileges.
+- English and Polish interfaces with a CSRF-protected language switcher
+- Five least-privilege roles: administrator, manager, editor, employee, and reader
+- Administrator account lifecycle management and security-policy controls
+- Classified dossier registry with ownership and clearance checks
+- Private incident reporting and incident-to-dossier conversion
+- Review, approval, rejection, and explicit declassification workflows
+- Additional access and workflow restrictions for `DOOM_LEVEL` dossiers
+- Responsive command-center interface built with HTML, CSS, and vanilla JavaScript
 
 ## Technology stack
 
-- Python 3.11 or newer
-- Flask
+- Python 3.11+
+- Flask and Jinja2
 - SQLite through Python's built-in `sqlite3` module
-- HTML, CSS, and JavaScript
-- Password hashing with `argon2-cffi` (Argon2id)
+- HTML, CSS, and vanilla JavaScript
+- `argon2-cffi` for Argon2id password hashing
 - pytest
 
-## Current implementation status
+## Security features
 
-Implemented:
+- Argon2id password hashing; plaintext passwords are never stored
+- Configurable minimum password length, forbidden-word policy, password history,
+  and password expiration
+- One-time temporary credentials with a maximum 12-hour lifetime and mandatory
+  first-login password change
+- Server-side sessions using random identifiers whose SHA-256 hashes are stored
+  in SQLite
+- Session inactivity expiration, revocation, role-change invalidation, and
+  rotation after a password change
+- Host-only, HttpOnly, SameSite cookies, with Secure cookies required in the
+  production configuration
+- Backend RBAC, live account-state checks, resource ownership validation, and
+  separate `DOOM_LEVEL` permission enforcement
+- CSRF protection for authentication, account, policy, localization, and
+  workflow mutations
+- Parameterized SQL, bounded request fields, Jinja autoescaping, and generic
+  authorization/error responses
+- Validated, size-bounded JSON dossier files stored outside public static paths,
+  with traversal and symbolic-link protection
+- Atomic dossier writes and conditional workflow transitions
+- Content Security Policy, clickjacking protection, `nosniff`, strict referrer
+  policy, no-store caching, and production-only HSTS
+- Sanitized security events that omit passwords, session identifiers, CSRF
+  tokens, and dossier content
 
-- Python virtual environment and pinned direct dependencies
-- Flask application factory and `GET /health`
-- SQLite database stored under `instance/`, with foreign keys enforced on every connection
-- Repeatable `init-db` and `seed-db` commands
-- Five roles, fourteen permissions, and an explicit least-privilege role mapping
-- Eight user records, including the permanent `ADMIN` identity, with no passwords until provisioning
-- Variant 10 security settings and the forbidden-word dictionary
-- Eight fictional dossier JSON files and matching dossier metadata
-- Argon2id password hashing and verification
-- Variant 10 password policy, password history, and password expiration
-- One-time temporary passwords and the local `provision-user` command
-- Login, mandatory first-password setup, and authenticated password change
-- Server-side sessions and CSRF protection for authentication and administrative forms
-- Configurable server-side inactivity expiration and authenticated activity tracking
-- Current, all-user, and other-session revocation helpers
-- Session identifier rotation after password changes and invalidation after provisioning
-- Live account-status and privilege-context checks, secure cookies, and session events
-- Expiration feedback and a CSRF-protected POST logout action
-- Database-backed permission checks and reusable login/permission decorators
-- Ownership policies for dossier editing/submission and private incident reading
-- Read-only dossier detail and filtered archive endpoints
-- Server-side dossier search and organization, classification, and status filters
-- Editor-only dossier creation with server-assigned identifiers, ownership, and draft status
-- Ownership-protected editing of draft dossier content
-- Validated UTF-8 JSON storage with bounded documents and atomic file replacement
-- Coordinated SQLite/JSON persistence with compensating cleanup and restoration
-- Sanitized dossier creation and update security events
-- Employee incident submission and ownership-protected report history
-- Editor-only incident review and atomic incident-to-dossier conversion
-- Owned-draft submission to a manager review queue
-- Classification-preserving dossier approval and reasoned rejection
-- Controlled declassification with an explicit DOOM_LEVEL prohibition
-- Conditional lifecycle transitions with synchronized SQLite and JSON state
-- Sanitized incident and dossier workflow security events
-- Classification and lifecycle checks, with additional DOOM_LEVEL permission
-- A protected administrator dashboard with live account counts
-- User listing, username search, role/status filters, account creation, and editing
-- Validated role assignment and pending account provisioning
-- Account blocking/unblocking and soft deletion that preserves historical references
-- Administrator password resets with one-time, 12-hour temporary credentials
-- Permanent ADMIN, self-protection, and last usable administrator safeguards
-- Atomic account changes, session revocation, and sanitized administrative events
-- A protected security settings panel requiring `security.manage`
-- Administrator-controlled forbidden-word policy, minimum password length, password validity, and session inactivity timeout
-- Forbidden-word creation, editing, and deletion with Unicode-aware duplicate detection
-- Live integration of security settings with permanent-password and server-side session enforcement
-- Atomic security configuration changes with sanitized audit events
-- Consistent HTML/JSON denial responses
-- Authorization failure events and isolated authorization regression tests
+Security controls are documented and regression-tested, but no software should
+be considered completely secure. See
+[docs/security_review.md](docs/security_review.md) for the focused Task6.1
+review.
 
-Not implemented yet:
+## Application roles
 
-- Advanced session administration
-- Task5.1 visual design and the language switcher
+- **Administrator** — manages users and application security policies; receives
+  no implicit dossier clearance.
+- **Manager** — reviews classified dossiers and may declassify eligible approved
+  records.
+- **Editor** — reviews submitted incidents and creates, edits, and submits owned
+  dossier drafts.
+- **Employee** — creates incident reports and reads only their own reports.
+- **Reader** — reads successfully declassified dossiers only.
 
-## Requirements
+All permissions are enforced on the server. Navigation visibility is only a
+presentation aid and never grants access.
 
-- Python 3.11 or newer
-- `pip`
+## Getting started
 
-## Installation
-
-Clone the repository and move into the project directory.
-
-### Windows (PowerShell)
+### Windows PowerShell
 
 ```powershell
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+flask --app app init-db
+flask --app app seed-db
 ```
 
 ### Linux and macOS
@@ -105,184 +93,89 @@ python -m pip install -r requirements.txt
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+flask --app app init-db
+flask --app app seed-db
 ```
 
-Direct dependencies are pinned in `requirements.txt`. Transitive packages are installed automatically by pip.
+The seed command creates inactive identities without usable credentials. A local
+operator can issue a one-time credential for an existing identity with:
+
+```bash
+flask --app app provision-user ADMIN
+```
+
+The credential is displayed once in the local terminal and must not be stored in
+source control or documentation.
 
 ## Running the application
 
-From the activated virtual environment, in the repository root:
+From the activated environment, run either:
 
 ```bash
 python app.py
 ```
 
-The development server listens on `http://127.0.0.1:5000`. Flask debug mode is disabled by default. Confirm the process is running with:
-
-```bash
-curl http://127.0.0.1:5000/health
-```
-
-The expected response is HTTP 200 and `{"status":"ok"}`.
-
-The same application can be started with:
+or:
 
 ```bash
 flask --app app run
 ```
 
-## Database
+The development server listens on `http://127.0.0.1:5000`. Debug mode is
+disabled by default. The health endpoint is available at `/health`.
 
-Initialize the schema, then load seed data:
+The SQLite database defaults to `instance/doomvault.db`. Set
+`DOOMVAULT_DATABASE` to use another path and `DOOMVAULT_DOSSIER_DIRECTORY` to
+use another dossier directory. Runtime database files are ignored by Git.
 
-```bash
-flask --app app init-db
-flask --app app seed-db
-```
+For HTTPS production operation, set `DOOMVAULT_ENV=production`. This enables
+Secure authentication and CSRF cookies and HSTS. The application does not
+provide deployment infrastructure or TLS termination.
 
-Both commands are safe to run again. `init-db` creates missing tables and indexes, upgrades legacy permission/status constraints, and adds nullable lifecycle columns without recreating the database or changing existing dossier content. `seed-db` inserts missing catalog data without overwriting existing accounts, passwords, role assignments, settings, or administrator-managed dictionary entries. Initial grants are installed for new roles or permissions; repeated seeding preserves manually revoked or added grants. A private seed-version marker ensures deleted default dictionary entries are not recreated.
+## Testing
 
-The database file is `instance/doomvault.db` unless `DOOMVAULT_DATABASE` is set. A relative path is resolved inside the instance directory. An absolute path is used as given. Database files are not committed.
-
-Seeded accounts are inactive and have no password hash. They cannot authenticate until a local operator provisions them. The command, the variant 10 password rules, and the session behavior are described in [docs/authentication.md](docs/authentication.md). Roles and the permission matrix are described in [docs/rbac.md](docs/rbac.md). The schema, settings, and dossier layout are described in [docs/database.md](docs/database.md).
-
-## Authentication
-
-Initialize the database, load seed data, and issue a one-time temporary password:
-
-```bash
-flask --app app init-db
-flask --app app seed-db
-flask --app app provision-user ADMIN
-```
-
-The command prints the temporary password once in that terminal. It is not stored in the repository. Sign in at `http://127.0.0.1:5000/login`, set a permanent password of at least 14 characters, and do not include a word from the organization dictionary. Details, including blocked accounts and password history, are in [docs/authentication.md](docs/authentication.md).
-
-## Session management (Task2.1)
-
-`settings.session_inactivity_timeout_minutes` defaults to 15 minutes. The backend checks both the last authenticated activity and the stored rolling deadline before renewing a session. Expired and revoked identifiers cannot be reused. Static assets, unknown routes, and health checks do not extend sessions.
-
-Session identifiers contain 256 random bits; only their SHA-256 hashes are stored. Authentication cookies remain HttpOnly, SameSite=Strict, and host-only, with path `/`. HTTPS requests use Secure cookies. Set `DOOMVAULT_ENV=production` before starting a production process to require Secure authentication and CSRF cookies even behind TLS termination. Local HTTP development remains available with the default environment. Production must be served over HTTPS.
-
-Password changes revoke existing sessions and issue a new identifier. Provisioning revokes all existing sessions. Blocked or inactive accounts are rejected during validation; a changed role requires fresh authentication. Permission changes within the same role take effect on subsequent requests without replacing the session.
-
-See [docs/session_management.md](docs/session_management.md) for lifecycle semantics, configuration, reusable operations, security tests, and manual verification.
-
-## Authorization (Task2.2)
-
-`GET /dossiers` lists only authorized metadata. `GET /dossiers/DV-001` displays a permitted document; send `Accept: application/json` to retrieve JSON. `GET /admin` requires `users.manage`. All decisions run on the backend, including direct URL requests.
-
-Readers can view only dossiers whose classification and status are both `DECLASSIFIED`. Managers can view classified dossiers in `PENDING`, legacy `SUBMITTED`, or `APPROVED` states. Editors can view their own non-DOOM_LEVEL `DRAFT` and `REJECTED` dossiers. DOOM_LEVEL additionally requires `dossiers.read_doom_level` and never bypasses lifecycle restrictions. Administrators receive no implicit dossier permissions. The seeded ownerless `DV-008` draft stays inaccessible.
-
-Unauthenticated browser requests redirect to login; JSON requests receive HTTP 401. Authenticated denials return HTTP 403 with a generic response and one sanitized security event. Missing or invalid dossier/file references return HTTP 404. JSON files remain outside static storage and are opened only after authorization.
-
-For an existing Task2.1 database, run `flask --app app init-db` followed by `flask --app app seed-db` before using the new endpoints. The development database is not migrated by the test suite.
-
-See [docs/rbac.md](docs/rbac.md) for all fourteen permissions and the matrix, [docs/authorization.md](docs/authorization.md) for policy and manual verification, and [docs/task2.2-report.md](docs/task2.2-report.md) for the delivery report.
-
-## Dossier management (Task4.1)
-
-`GET /dossiers` is the central registry. Search matches partial dossier IDs and titles; organization, classification, and status filters can be combined. Filtering is performed on the server, and every candidate is passed through the existing Task2.2 authorization policy before its metadata is returned. Invalid or repeated filter values receive HTTP 400 without disclosing hidden records. The registry displays stable `updated_at` values and never returns file names, owners, approvers, or filesystem paths.
-
-Editors with `dossiers.create` can use `GET` and `POST /dossiers/new`. The backend accepts only `INTERNAL` and `SECRET` authoring classifications, always assigns `DRAFT`, derives ownership from the authenticated session, and generates the next available `DV-XXX` identifier under an immediate SQLite write transaction. Client-supplied IDs, owners, approvers, statuses, and timestamps are ignored. Other roles, including administrators, receive no implicit creation access.
-
-Editors with `dossiers.edit_own` can use `GET` and `POST /dossiers/<id>/edit` only for a `DRAFT` they own. IDs, ownership, approval fields, status, and creation time remain immutable. The form carries the last update timestamp so a stale page cannot silently overwrite a newer edit. Approved, pending, rejected, declassified, other-user, and DOOM_LEVEL records cannot be changed through this route.
-
-SQLite remains authoritative for authorization metadata. JSON files contain the matching display content and stay outside `static/`. File names must exactly match `DV-XXX.json`; absolute paths, traversal, and symbolic-link files are rejected. Documents are size-bounded and validated before UTF-8 serialization. Writes use a temporary file in the storage directory and an atomic publication or replacement step. Creation removes the file if its database transaction fails; editing retains the prior bytes and restores them if metadata or event persistence fails.
-
-Successful creation and editing record `dossier_created` or `dossier_updated` in `security_events` with only the actor ID and dossier ID. Summaries, observations, credentials, session identifiers, and filesystem paths are not logged. Missing dossiers and invalid document references return HTTP 404; existing but unauthorized records return the existing generic HTTP 403 response.
-
-See [docs/dossier_management.md](docs/dossier_management.md) for the JSON structure, endpoint behavior, storage guarantees, automated coverage, and a concise manual walkthrough.
-
-## Classification and approval workflow (Task4.2)
-
-Employees with `incidents.create` can submit bounded title and description text through `GET` and `POST /incidents/new`. The server assigns ownership and `NEW`; client-supplied owners or statuses are ignored. `/incidents` exposes only the authenticated employee's reports. Editors receive the separate `incidents.read_submitted` permission and may review `NEW` reports without gaining access to unrelated account data.
-
-An editor can convert an authorized incident into one owned `DRAFT`. The operation copies only appropriate report content, records `source_incident_id`, publishes the validated JSON document, changes the incident to `PROCESSED`, and records sanitized events in one coordinated operation. A partial database or storage failure leaves the report `NEW`, removes incomplete files, and creates no success event. The unique source relationship prevents duplicate conversion.
-
-Owned drafts move from `DRAFT` to `PENDING` through a CSRF-protected POST. Managers with `dossiers.review` see only authorized pending records. Approval changes `PENDING` to `APPROVED`, records the manager, and deliberately preserves classification. Rejection changes `PENDING` to terminal `REJECTED`; its bounded reason is stored in SQLite, omitted from security logs, and shown only to the authorized owner. Ordinary editing and resubmission cannot reopen a rejected dossier.
-
-Declassification is a separate confirmed POST available only for authorized `APPROVED` records. It atomically changes both status and classification to `DECLASSIFIED`, records the responsible manager and the previous classification, and then permits ordinary declassified readers to access the record. The standard route always rejects `DOOM_LEVEL`, even for a manager who may read it. Conditional updates, immediate write transactions, and atomic JSON replacement prevent competing workflow actions from producing contradictory database and document state.
-
-Missing resources return HTTP 404, authorization failures return HTTP 403 without classified content, invalid or stale lifecycle transitions return HTTP 409, and malformed input or CSRF tokens return HTTP 400. See [docs/dossier_workflow.md](docs/dossier_workflow.md) for endpoints, status rules, concurrency guarantees, audit behavior, automated coverage, and the complete manual verification path.
-
-## User management (Task3.1)
-
-Open `/admin` after signing in with a fully established account that has `users.manage`. The initial role mapping grants this permission only to administrators. Every administrative route checks it on the backend; neither the username `ADMIN` nor a visible navigation link grants access. Unauthenticated browser requests redirect to login, and authenticated users without permission receive HTTP 403.
-
-The dashboard shows total, active, pending-provisioning, and blocked account counts. `/admin/users` lists non-deleted accounts with username, role, status, and creation date, and supports username search and role/status filters. Creation validates case-insensitive username uniqueness and a database-backed role selection. A new account remains pending until provisioned; the creation form can generate its first temporary credential immediately.
-
-Provisioning and administrator password resets reuse the existing three-random-word/two-digit generator and Argon2id hashing. Temporary credentials last 12 hours, require a new permanent password at sign-in, and appear only in the immediate POST response with no-store headers. Plaintext is never placed in a URL, flash message, stored session, database record, or log. Previous temporary credentials and existing sessions are invalidated. Resetting a blocked account leaves it blocked.
-
-Username and role changes, blocking, and deletion revoke existing sessions in the account-change transaction. Blocking preserves the underlying provisioning state; unblocking does not create credentials or extend their expiry. Soft deletion sets `deleted_at`, disables access, and preserves account IDs, password history, dossier ownership, and audit references. Deleted usernames remain reserved, and deleted accounts cannot be restored through the interface.
-
-The permanent ADMIN identity cannot be renamed, demoted, blocked, or deleted. Administrators cannot remove their own administrative role, block themselves, or delete themselves. Operations also protect the last usable administrator, checking current account and credential state under the same database write lock as the change. Administrative events identify the actor and target account IDs without authentication secrets.
-
-Run `flask --app app init-db` against an existing database before using Task3.1. The upgrade preserves accounts and does not require dropping or recreating the database. See [docs/user_management.md](docs/user_management.md) for endpoint behavior, lifecycle rules, safeguards, tests, and a disposable-account manual walkthrough.
-
-The [Task3.1 delivery report](docs/task3.1-report.md) lists the changed files, delivered functionality, validation, and remaining limits.
-
-## Security policy management (Task3.2)
-
-Open `/admin/security` after signing in with a fully established account that has `security.manage`. This permission is checked independently from `users.manage` on every page and mutation. Unauthenticated browser requests redirect to login; authenticated users without the permission receive HTTP 403. All changes use POST, CSRF validation, an allowlisted backend operation, and a second live authorization check inside the SQLite write transaction.
-
-The panel controls the forbidden-word rule, permanent-password minimum length, permanent-password validity, and server-side inactivity timeout. Minimum length accepts 14 through 128 characters. Password validity accepts 0 through 3650 days; zero disables periodic expiration and remains the default. Session inactivity accepts 1 through 1440 minutes. The temporary-credential lifetime is displayed read-only and remains capped at 12 hours.
-
-`/admin/security/forbidden-words` provides ID-based creation, editing, and deletion. Entries are trimmed and stored in NFKC casefolded form. Matching and duplicate detection additionally remove combining marks and fold Polish `ł` to `l`, so canonical Unicode forms, letter case, and accented/unaccented Polish spellings behave consistently. Jinja escaping prevents stored entries from becoming executable markup. A deleted default stays deleted during later seed runs.
-
-Changes affect subsequent password validation and session validation without rewriting password hashes or bypassing password history. Enabling a stricter policy does not retroactively invalidate existing passwords. Shortening the inactivity timeout can expire existing sessions on their next request; a session already expired or revoked cannot be revived by a later configuration change. Successful changes produce sanitized `security_events` rows containing the actor and non-secret operation details.
-
-See [docs/security_policies.md](docs/security_policies.md) for endpoint behavior, validation bounds, enforcement semantics, audit events, automated coverage, and a concise manual walkthrough.
-
-## Running tests
-
-From the repository root, with the virtual environment activated:
+Run the complete local suite from the repository root:
 
 ```bash
 python -m pytest -q
 ```
 
-Tests use temporary SQLite databases and do not modify `instance/doomvault.db`. Session tests use a controllable UTC clock without real waiting or network dependencies. Authorization tests cover every role, live permission changes, ownership, classification/lifecycle restrictions, file traversal, denial logging, and schema upgrades. Dossier-management tests cover authorization-preserving search, strict filters, creation permissions, classification limits, server-controlled metadata, CSRF, owned-draft editing, stale updates, HTML escaping, event secrecy, and database/filesystem rollback behavior. User-management tests cover administrative access, validation, account lifecycle changes, session revocation, protected identities, credential handling, and audit secrecy. Security-policy tests cover independent RBAC, CSRF, strict bounds, mass-assignment resistance, Unicode dictionary CRUD, live password/session enforcement, durable deletions, transactional audit logging, and secret-free output. The symbolic-link test is skipped on hosts that do not permit creating links.
+Tests use isolated temporary databases and dossier directories. They cover
+authentication, password policy, session expiration and revocation, RBAC,
+ownership, classified and `DOOM_LEVEL` access, CSRF, input validation, SQL
+search behavior, output escaping, storage boundaries, workflow transitions,
+account administration, security settings, and localization redirects.
 
 ## Project structure
 
 ```text
-app.py                  Flask application factory, CLI registration, and health endpoint
-config.py               Application configuration, including the database path
-database.py             SQLite connection management and init-db
-schema.sql              Table, constraint, and index definitions
-seed.py                 Idempotent seed data and seed-db
-docs/authentication.md  Password policy, provisioning, login, and sessions
-docs/session_management.md  Task2.1 session lifecycle, configuration, and verification
-docs/database.md        Schema, settings, and dossier storage
-docs/rbac.md            Roles and permission matrix
-docs/authorization.md   Task2.2 policy, protected endpoints, and verification
-docs/task2.2-report.md  Task2.2 delivery report and validation results
-docs/user_management.md Task3.1 account lifecycle, administrator interface, and verification
-docs/security_policies.md Task3.2 security settings, enforcement, audit behavior, and verification
-docs/dossier_management.md Task4.1 registry, authoring, storage, and verification
-docs/dossier_workflow.md Task4.2 incidents, approval lifecycle, declassification, and verification
-requirements.txt        Pinned direct dependencies
-data/dossiers/          Fictional dossier JSON files
-data/wordlist.txt       Wordlist used for temporary passwords
-auth/                   Password hashing, policy, login, and sessions
-security/               CSRF, authorization policies, error responses, security logging
-modules/                Protected administration, dossier routes, and dossier services
-locales/                Reserved for future English and Polish translations
-templates/              Authentication, archive/detail, user administration, and 403 pages
-static/                 Shared authentication and administration stylesheet
-tests/                  Automated tests
-instance/               Local runtime data; database files are not committed
+app.py                  Flask application factory
+config.py               Security and runtime configuration
+database.py             SQLite connection and schema initialization
+schema.sql              Database tables, constraints, indexes, and triggers
+auth/                   Authentication, passwords, and server-side sessions
+security/               CSRF, authorization, errors, and security events
+modules/                Administration, dossier, incident, and workflow logic
+templates/              Jinja2 application views
+static/                 Shared CSS and JavaScript
+locales/                English and Polish translation catalogs
+data/dossiers/          Non-public fictional dossier JSON documents
+docs/                   Design, security, and module documentation
+tests/                  pytest regression suite
+instance/               Ignored local runtime data
 ```
 
-Authorization helpers under `security/` are reused by the workflow endpoints. Message codes for a future Polish catalog live in `auth/messages.py`; language switching remains deferred.
-
-## Planned features
-
-- Advanced session administration
-- Task5.1 DoomVault visual design
-- A lightweight translation layer with English as the default language and Polish as a second language
+Additional design and verification details are available in the documentation
+for [authentication](docs/authentication.md),
+[sessions](docs/session_management.md), [authorization](docs/authorization.md),
+[RBAC](docs/rbac.md), [user management](docs/user_management.md),
+[security policies](docs/security_policies.md),
+[dossier management](docs/dossier_management.md), and
+[dossier workflows](docs/dossier_workflow.md).
 
 ## Disclaimer
 
-DoomVault is an unofficial educational fan project. It is not affiliated with, endorsed by, or associated with Marvel or Disney. All organization names drawn from the Marvel Cinematic Universe are used here only as fictional theme material for coursework and portfolio demonstration.
+DoomVault is an unofficial educational fan project. It is not affiliated with,
+endorsed by, or associated with Marvel or Disney. Organization names inspired
+by the Marvel Cinematic Universe are used only as fictional theme material for
+coursework and a cybersecurity portfolio.
