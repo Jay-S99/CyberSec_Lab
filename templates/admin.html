@@ -1,16 +1,16 @@
 {% extends "admin/base.html" %}
-{% block title %}Administration - DoomVault{% endblock %}
+{% block title %}{{ t('admin.title') }} - DoomVault{% endblock %}
 {% block admin_content %}
-<div class="page-header admin-page-title"><div><p class="eyebrow">Control overview // Live account records</p><h1>Security operations <span>center</span></h1><p>Manage user accounts, roles, and access to DoomVault.</p></div></div>
-<dl class="admin-summary" aria-label="User account summary">
-  <div><span>01</span><dt>Total accounts</dt><dd>{{ counts.total }}</dd></div>
-  <div class="summary-success"><span>02</span><dt>Active</dt><dd>{{ counts.active }}</dd></div>
-  <div class="summary-warning"><span>03</span><dt>Pending provisioning</dt><dd>{{ counts.pending }}</dd></div>
-  <div class="summary-danger"><span>04</span><dt>Blocked</dt><dd>{{ counts.blocked }}</dd></div>
+<div class="page-header admin-page-title"><div><p class="eyebrow">{{ t('admin.overview_eyebrow') }}</p><h1>{{ t('admin.center_heading_one') }} <span>{{ t('admin.center_heading_two') }}</span></h1><p>{{ t('admin.center_intro') }}</p></div></div>
+<dl class="admin-summary" aria-label="{{ t('admin.account_summary') }}">
+  <div><span>01</span><dt>{{ t('admin.total_accounts') }}</dt><dd>{{ counts.total }}</dd></div>
+  <div class="summary-success"><span>02</span><dt>{{ t('common.active') }}</dt><dd>{{ counts.active }}</dd></div>
+  <div class="summary-warning"><span>03</span><dt>{{ t('admin.pending_provisioning') }}</dt><dd>{{ counts.pending }}</dd></div>
+  <div class="summary-danger"><span>04</span><dt>{{ t('common.blocked') }}</dt><dd>{{ counts.blocked }}</dd></div>
 </dl>
 <div class="admin-command-grid">
-  <a class="action-card action-card-primary" href="{{ url_for('admin.users') }}"><span class="card-code">IDENTITY // CONTROL</span><h3>Manage users</h3><p>Review operator access, roles, credentials, and account state.</p><span class="card-link">Open identity control <b>→</b></span></a>
-  {% if can_manage_security %}<a class="action-card" href="{{ url_for('admin.security') }}"><span class="card-code">POLICY // CONTROL</span><h3>Security settings</h3><p>Configure organization password and session protection.</p><span class="card-link">Open policy control <b>→</b></span></a>{% endif %}
+  <a class="action-card action-card-primary" href="{{ url_for('admin.users') }}"><span class="card-code">{{ t('admin.identity_control_code') }}</span><h3>{{ t('admin.manage_users') }}</h3><p>{{ t('admin.manage_users_description') }}</p><span class="card-link">{{ t('admin.open_identity_control') }} <b>→</b></span></a>
+  {% if can_manage_security %}<a class="action-card" href="{{ url_for('admin.security') }}"><span class="card-code">{{ t('admin.policy_control_code') }}</span><h3>{{ t('admin.security_settings') }}</h3><p>{{ t('admin.security_description') }}</p><span class="card-link">{{ t('admin.open_policy_control') }} <b>→</b></span></a>{% endif %}
 </div>
-<p class="admin-muted operational-note">Deleted accounts are excluded from these totals. Pending accounts need a valid temporary credential before their first sign-in.</p>
+<p class="admin-muted operational-note">{{ t('admin.overview_note') }}</p>
 {% endblock %}
