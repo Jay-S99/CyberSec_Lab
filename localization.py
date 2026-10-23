@@ -200,12 +200,17 @@ def localize_context(context):
 
 
 def _safe_return_path(candidate):
-    if not candidate:
+    if not isinstance(candidate, str) or not candidate.startswith("/"):
+        return None
+    if candidate.startswith("//") or "\\" in candidate:
+        return None
+    if any(
+        ord(character) < 32 or ord(character) == 127
+        for character in candidate
+    ):
         return None
     parsed = urlsplit(candidate)
     if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
-        return None
-    if parsed.path.startswith("//"):
         return None
     return candidate
 
