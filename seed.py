@@ -138,6 +138,9 @@ SETTINGS = {
 
 FORBIDDEN_WORDS_V1_COUNT = 26
 FORBIDDEN_WORDS = (
+    "strongestavenger",
+    "strongest-avenger",
+    "strongest_avenger",
     "doomvault",
     "hydra",
     "shield",
