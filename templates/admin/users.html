@@ -1,48 +1,48 @@
 {% extends "admin/base.html" %}
-{% block title %}User management - DoomVault{% endblock %}
+{% block title %}{{ t('admin.user_management_title') }} - DoomVault{% endblock %}
 {% block admin_content %}
 <div class="admin-heading">
   <div>
-    <p class="eyebrow">Identity control // Operator directory</p>
-    <h1>User <span>management</span></h1>
-    <p class="admin-muted">Review non-deleted accounts and manage their access.</p>
+    <p class="eyebrow">{{ t('admin.directory_eyebrow') }}</p>
+    <h1>{{ t('admin.user_heading_one') }} <span>{{ t('admin.user_heading_two') }}</span></h1>
+    <p class="admin-muted">{{ t('admin.user_intro') }}</p>
   </div>
-  <a class="button button-primary" href="{{ url_for('admin.new_user') }}">Create user <span aria-hidden="true">＋</span></a>
+  <a class="button button-primary" href="{{ url_for('admin.new_user') }}">{{ t('admin.create_user') }} <span aria-hidden="true">＋</span></a>
 </div>
 <form class="filter-panel admin-filters" method="get" action="{{ url_for('admin.users') }}">
-  <div class="filter-heading"><span class="section-number">DIRECTORY FILTER</span><strong>Refine operator query</strong></div>
+  <div class="filter-heading"><span class="section-number">{{ t('admin.directory_filter') }}</span><strong>{{ t('admin.refine_operator_query') }}</strong></div>
   <div>
-    <label for="search">Username</label>
-    <input id="search" name="search" type="search" value="{{ filters.search }}" placeholder="Search usernames">
+    <label for="search">{{ t('common.username') }}</label>
+    <input id="search" name="search" type="search" value="{{ filters.search }}" placeholder="{{ t('admin.search_usernames') }}">
   </div>
   <div>
-    <label for="role">Role</label>
+    <label for="role">{{ t('common.role') }}</label>
     <select id="role" name="role">
-      <option value="">All roles</option>
+      <option value="">{{ t('admin.all_roles') }}</option>
       {% for role in roles %}
-        <option value="{{ role.id }}"{% if filters.role|string == role.id|string %} selected{% endif %}>{{ role.name|title }}</option>
+        <option value="{{ role.id }}"{% if filters.role|string == role.id|string %} selected{% endif %}>{{ role.name|role_label }}</option>
       {% endfor %}
     </select>
   </div>
   <div>
-    <label for="status">Account status</label>
+    <label for="status">{{ t('common.account_status') }}</label>
     <select id="status" name="status">
-      <option value="">All statuses</option>
-      <option value="pending"{% if filters.status == 'pending' %} selected{% endif %}>Pending provisioning</option>
-      <option value="active"{% if filters.status == 'active' %} selected{% endif %}>Active</option>
-      <option value="blocked"{% if filters.status == 'blocked' %} selected{% endif %}>Blocked</option>
+      <option value="">{{ t('admin.all_statuses') }}</option>
+      <option value="pending"{% if filters.status == 'pending' %} selected{% endif %}>{{ 'pending'|account_status_label }}</option>
+      <option value="active"{% if filters.status == 'active' %} selected{% endif %}>{{ 'active'|account_status_label }}</option>
+      <option value="blocked"{% if filters.status == 'blocked' %} selected{% endif %}>{{ 'blocked'|account_status_label }}</option>
     </select>
   </div>
   <div class="admin-filter-actions">
-    <button class="button button-primary" type="submit">Filter users</button>
-    <a class="button button-ghost" href="{{ url_for('admin.users') }}">Clear</a>
+    <button class="button button-primary" type="submit">{{ t('admin.filter_users') }}</button>
+    <a class="button button-ghost" href="{{ url_for('admin.users') }}">{{ t('common.clear') }}</a>
   </div>
 </form>
-<div class="data-table-wrap" tabindex="0" role="region" aria-label="User accounts">
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="{{ t('admin.user_accounts') }}">
   <table class="data-table admin-table">
-    <caption>{{ users|length }} account{% if users|length != 1 %}s{% endif %} found</caption>
+    <caption>{{ t('admin.account_count', count=users|length) }}</caption>
     <thead>
-      <tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Created (UTC)</th><th scope="col">Actions</th></tr>
+      <tr><th scope="col">{{ t('common.username') }}</th><th scope="col">{{ t('common.role') }}</th><th scope="col">{{ t('common.status') }}</th><th scope="col">{{ t('common.created_utc') }}</th><th scope="col">{{ t('common.actions') }}</th></tr>
     </thead>
     <tbody>
       {% for user in users %}
@@ -51,41 +51,41 @@
         <tr>
           <th scope="row">
             <a class="record-id" href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ user.username }}</a>
-            {% if is_self %}<span class="admin-muted">(you)</span>{% endif %}
-            {% if is_permanent %}<span class="admin-protected">Protected identity</span>{% endif %}
+            {% if is_self %}<span class="admin-muted">({{ t('common.you') }})</span>{% endif %}
+            {% if is_permanent %}<span class="admin-protected">{{ t('admin.protected_identity') }}</span>{% endif %}
           </th>
-          <td>{{ user.role_name|title }}</td>
-          <td><span class="admin-status admin-status-{{ user.account_status }}">{% if user.account_status == 'pending' %}Pending provisioning{% else %}{{ user.account_status|title }}{% endif %}</span></td>
+          <td>{{ user.role_name|role_label }}</td>
+          <td><span class="admin-status admin-status-{{ user.account_status }}">{{ user.account_status|account_status_label }}</span></td>
           <td class="admin-date">{{ user.created_at }}</td>
           <td>
             <div class="admin-row-actions">
-              <a class="table-action" href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+              <a class="table-action" href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ t('common.edit') }}</a>
               <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button class="admin-secondary" type="submit">{% if user.account_status == 'pending' %}Generate credential{% else %}Reset password{% endif %}</button>
+                <button class="admin-secondary" type="submit">{% if user.account_status == 'pending' %}{{ t('admin.generate_credential') }}{% else %}{{ t('admin.reset_password') }}{% endif %}</button>
               </form>
               {% if user.account_status == 'blocked' %}
                 <form method="post" action="{{ url_for('admin.unblock_user', user_id=user.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <button class="admin-secondary" type="submit">Unblock</button>
+                  <button class="admin-secondary" type="submit">{{ t('admin.unblock') }}</button>
                 </form>
               {% elif not is_self and not is_permanent %}
                 <form method="post" action="{{ url_for('admin.block_user', user_id=user.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <button class="admin-secondary" type="submit">Block</button>
+                  <button class="admin-secondary" type="submit">{{ t('admin.block') }}</button>
                 </form>
               {% endif %}
               {% if not is_self and not is_permanent %}
                 <details class="admin-delete">
-                  <summary>Delete account</summary>
+                  <summary>{{ t('admin.delete_account') }}</summary>
                   <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <p>Deletion removes access and preserves historical records. This account cannot be restored.</p>
+                    <p>{{ t('admin.delete_account_warning') }}</p>
                     <label class="admin-check" for="confirm-delete-{{ user.id }}">
                       <input id="confirm-delete-{{ user.id }}" name="confirm_delete" type="checkbox" value="yes" required>
-                      <span>I confirm deletion of {{ user.username }}.</span>
+                      <span>{{ t('admin.confirm_user_deletion', username=user.username) }}</span>
                     </label>
-                  <button class="button button-danger" type="submit">Delete {{ user.username }}</button>
+                  <button class="button button-danger" type="submit">{{ t('admin.delete_user', username=user.username) }}</button>
                   </form>
                 </details>
               {% endif %}
@@ -93,10 +93,10 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5">No accounts match these filters.</td></tr>
+        <tr><td colspan="5">{{ t('admin.no_accounts') }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-<p class="admin-muted">Blocking, role changes, and password resets revoke existing sessions. Unblocking preserves credential validity; an account without usable credentials still needs provisioning.</p>
+<p class="admin-muted">{{ t('admin.user_security_note') }}</p>
 {% endblock %}
