@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Dossier registry - DoomVault{% endblock %}
+{% block title %}{{ t('dossiers.registry_title') }} - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>Intelligence archive</span></nav>
+<nav class="breadcrumbs" aria-label="{{ t('common.breadcrumb') }}"><a href="{{ url_for('auth.home') }}">{{ t('common.command_center') }}</a><span>/</span><span>{{ t('nav.intelligence_archive') }}</span></nav>
 <header class="page-header">
   <div>
-    <p class="eyebrow">Intelligence archive // Authorized records</p>
-    <h1>Dossier <span>registry</span></h1>
-    <p>Only records authorized for your current clearance are shown.</p>
+    <p class="eyebrow">{{ t('dossiers.archive_eyebrow') }}</p>
+    <h1>{{ t('dossiers.registry_heading_one') }} <span>{{ t('dossiers.registry_heading_two') }}</span></h1>
+    <p>{{ t('dossiers.registry_intro') }}</p>
   </div>
   {% if can_create %}
-    <a class="button button-primary" href="{{ url_for('dossiers.create') }}">Create dossier <span aria-hidden="true">＋</span></a>
+    <a class="button button-primary" href="{{ url_for('dossiers.create') }}">{{ t('dossiers.create') }} <span aria-hidden="true">＋</span></a>
   {% endif %}
 </header>
 
@@ -23,52 +23,52 @@
 {% endif %}
 
 <form class="filter-panel" method="get" action="{{ url_for('dossiers.index') }}">
-  <div class="filter-heading"><span class="section-number">FILTER PROTOCOL</span><strong>Refine archive query</strong></div>
-  <label class="filter-search" for="search">Search by ID or title
+  <div class="filter-heading"><span class="section-number">{{ t('dossiers.filter_protocol') }}</span><strong>{{ t('dossiers.refine_query') }}</strong></div>
+  <label class="filter-search" for="search">{{ t('dossiers.search_label') }}
     <input id="search" name="search" type="search" maxlength="{{ search_max_length }}" value="{{ filters.search }}">
   </label>
-  <label for="organization">Organization
+  <label for="organization">{{ t('common.organization') }}
     <select id="organization" name="organization">
-      <option value="">All organizations</option>
+      <option value="">{{ t('dossiers.all_organizations') }}</option>
       {% for option in organizations %}
         <option value="{{ option }}"{% if filters.organization == option %} selected{% endif %}>{{ option }}</option>
       {% endfor %}
     </select>
   </label>
-  <label for="classification">Classification
+  <label for="classification">{{ t('common.classification') }}
     <select id="classification" name="classification">
-      <option value="">All classifications</option>
+      <option value="">{{ t('dossiers.all_classifications') }}</option>
       {% for option in classifications %}
         <option value="{{ option }}"{% if filters.classification == option %} selected{% endif %}>{{ option }}</option>
       {% endfor %}
     </select>
   </label>
-  <label for="status">Status
+  <label for="status">{{ t('common.status') }}
     <select id="status" name="status">
-      <option value="">All statuses</option>
+      <option value="">{{ t('dossiers.all_statuses') }}</option>
       {% for option in statuses %}
-        <option value="{{ option }}"{% if filters.status == option %} selected{% endif %}>{{ option }}</option>
+        <option value="{{ option }}"{% if filters.status == option %} selected{% endif %}>{{ option|status_label }}</option>
       {% endfor %}
     </select>
   </label>
   <div class="filter-actions">
-    <button class="button button-primary" type="submit">Apply filters</button>
-    <a class="button button-ghost" href="{{ url_for('dossiers.index') }}">Clear</a>
+    <button class="button button-primary" type="submit">{{ t('dossiers.apply_filters') }}</button>
+    <a class="button button-ghost" href="{{ url_for('dossiers.index') }}">{{ t('common.clear') }}</a>
   </div>
 </form>
 
 {% if dossiers %}
-  <div class="data-table-wrap" tabindex="0" role="region" aria-label="Authorized dossiers">
+  <div class="data-table-wrap" tabindex="0" role="region" aria-label="{{ t('dossiers.authorized_region') }}">
     <table class="data-table">
-      <caption>{{ dossiers|length }} authorized dossier{% if dossiers|length != 1 %}s{% endif %}</caption>
+      <caption>{{ t('dossiers.result_count', count=dossiers|length) }}</caption>
       <thead>
         <tr>
           <th scope="col">ID</th>
-          <th scope="col">Title</th>
-          <th scope="col">Organization</th>
-          <th scope="col">Classification</th>
-          <th scope="col">Status</th>
-          <th scope="col">Last update</th>
+          <th scope="col">{{ t('common.title') }}</th>
+          <th scope="col">{{ t('common.organization') }}</th>
+          <th scope="col">{{ t('common.classification') }}</th>
+          <th scope="col">{{ t('common.status') }}</th>
+          <th scope="col">{{ t('common.last_update') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -78,7 +78,7 @@
           <td>{{ dossier.title }}</td>
           <td>{{ dossier.organization }}</td>
           <td><span class="badge badge-classification classification-{{ dossier.classification|lower|replace('_', '-') }}">{{ dossier.classification }}</span></td>
-          <td><span class="badge status-{{ dossier.status|lower }}">{{ dossier.status }}</span></td>
+          <td><span class="badge status-{{ dossier.status|lower }}">{{ dossier.status|status_label }}</span></td>
           <td class="technical-text"><time datetime="{{ dossier.updated_at }}">{{ dossier.updated_at }}</time></td>
         </tr>
       {% endfor %}
@@ -86,6 +86,6 @@
     </table>
   </div>
 {% else %}
-  <div class="empty-state"><span aria-hidden="true">Ø</span><h2>No dossiers located</h2><p>No dossiers match your current clearance and filters.</p></div>
+  <div class="empty-state"><span aria-hidden="true">Ø</span><h2>{{ t('dossiers.none_heading') }}</h2><p>{{ t('dossiers.none_text') }}</p></div>
 {% endif %}
 {% endblock %}
