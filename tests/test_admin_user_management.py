@@ -403,7 +403,7 @@ def test_initial_provisioning_issues_only_a_hash_with_twelve_hour_expiry(
     assert location_path(login) == "/password/change"
     assert location_path(user_client.get("/admin")) == "/password/change"
     assert submit_password_change(user_client, "short").status_code == 200
-    changed = submit_password_change(user_client, "differenthorsebatter")
+    changed = submit_password_change(user_client, "Cobalt!Harbor22-Maple")
     assert changed.status_code == 303
     assert user_client.get("/admin").status_code == 403
 
@@ -435,7 +435,7 @@ def test_administrators_can_edit_names_and_roles_and_revoke_stale_sessions(
         app, "SELECT revoked_at FROM sessions WHERE id = ?", (session_id,)
     )[0][0]
     assert location_path(user_client.get("/")) == "/login"
-    login = post_login(user_client, "renamed_agent", "correcthorsebattery")
+    login = post_login(user_client, "renamed_agent", "Quartz!River1-Key")
     assert login.status_code == 303
     assert user_client.get("/admin").status_code == 403
     assert user_client.get("/test/permissions").json["permissions"] == [
@@ -596,7 +596,7 @@ def test_blocking_revokes_every_session_and_unblocking_requires_new_login(
     for token in tokens:
         user_client.set_cookie("doomvault_session", token)
         assert location_path(user_client.get("/")) == "/login"
-    rejected = post_login(user_client, "agent02", "correcthorsebattery")
+    rejected = post_login(user_client, "agent02", "Quartz!River1-Key")
     assert rejected.status_code == 200
     assert "Invalid username or password." in page_text(rejected)
     events_before = rows(app, "SELECT COUNT(*) FROM security_events")[0][0]
@@ -610,7 +610,7 @@ def test_blocking_revokes_every_session_and_unblocking_requires_new_login(
     for token in tokens:
         user_client.set_cookie("doomvault_session", token)
         assert location_path(user_client.get("/")) == "/login"
-    assert post_login(user_client, "agent02", "correcthorsebattery").status_code == 303
+    assert post_login(user_client, "agent02", "Quartz!River1-Key").status_code == 303
     assert not credentials(app, target)
 
 
@@ -715,7 +715,7 @@ def test_soft_deletion_preserves_history_ownership_and_invalidates_credentials(
     user_client = app.test_client()
     user_client.set_cookie("doomvault_session", token)
     assert location_path(user_client.get("/")) == "/login"
-    for password in ("correcthorsebattery", credential):
+    for password in ("Quartz!River1-Key", credential):
         assert post_login(user_client, "agent02", password).status_code == 200
         assert session_token(user_client) is None
     reset = mutation(admin_client, f"/admin/users/{target}/reset-password")
@@ -743,7 +743,7 @@ def test_deleted_marker_denies_authentication_even_with_inconsistent_active_flag
     user_client = app.test_client()
     user_client.set_cookie("doomvault_session", token)
     assert location_path(user_client.get("/")) == "/login"
-    response = post_login(user_client, "agent02", "correcthorsebattery")
+    response = post_login(user_client, "agent02", "Quartz!River1-Key")
     assert response.status_code == 200
     assert "Invalid username or password." in page_text(response)
     assert session_token(user_client) is None
@@ -760,7 +760,7 @@ def test_session_creation_rechecks_deletion_after_password_verification(
     app, admin_client, authorization_accounts, session_clock, credential_kind
 ):
     target = authorization_accounts["agent02"]
-    password = "correcthorsebattery"
+    password = "Quartz!River1-Key"
     if credential_kind == "temporary":
         password = reset_credential(admin_client, target)
     with app.app_context():
@@ -817,14 +817,14 @@ def test_reset_replaces_all_credentials_revokes_sessions_and_retains_history(
     user_client = app.test_client()
     user_client.set_cookie("doomvault_session", token)
     assert location_path(user_client.get("/")) == "/login"
-    for password in (first, "correcthorsebattery"):
+    for password in (first, "Quartz!River1-Key"):
         rejected = post_login(user_client, "agent02", password)
         assert "Invalid username or password." in page_text(rejected)
     login = post_login(user_client, "agent02", second)
     assert login.status_code == 303
     assert location_path(login) == "/password/change"
-    assert submit_password_change(user_client, "correcthorsebattery").status_code == 200
-    changed = submit_password_change(user_client, "differenthorsebatter")
+    assert submit_password_change(user_client, "Quartz!River1-Key").status_code == 200
+    changed = submit_password_change(user_client, "Cobalt!Harbor22-Maple")
     assert changed.status_code == 303
 
 

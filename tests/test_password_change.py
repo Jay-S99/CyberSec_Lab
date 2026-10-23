@@ -13,9 +13,9 @@ from tests.helpers import (
 )
 
 
-CURRENT = "correcthorsebattery"
-UPDATED = "differenthorsebatter"
-THIRD = "secondhorsebatteryx"
+CURRENT = "Quartz!River1-Key"
+UPDATED = "Cobalt!Harbor22-Maple"
+THIRD = "Velvet!Comet3-Lock"
 
 
 def test_password_change_requires_the_current_password(app, client):
@@ -25,7 +25,7 @@ def test_password_change_requires_the_current_password(app, client):
     wrong = submit_password_change(
         client,
         UPDATED,
-        current_password="thirdhorsebatteryxxx",
+        current_password="Silver!Prairie4-Gate",
     )
     missing = submit_password_change(client, UPDATED)
 
@@ -46,7 +46,7 @@ def test_password_confirmation_is_validated(app, client):
     response = submit_password_change(
         client,
         UPDATED,
-        confirmation="thirdhorsebatteryxxx",
+        confirmation="Silver!Prairie4-Gate",
         current_password=CURRENT,
     )
 
@@ -185,7 +185,7 @@ def test_disabling_expiration_restores_an_existing_session(app, client):
 
     assert location_path(blocked) == "/password/change"
     assert restored.status_code == 200
-    assert "Authenticated session established." in page_text(restored)
+    assert "Your authenticated workspace is ready." in page_text(restored)
 
 
 def _activate(app, client, username, password):

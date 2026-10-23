@@ -159,7 +159,7 @@ def test_expired_temporary_credentials_are_rejected(app, client):
 def test_unprovisioned_accounts_cannot_authenticate(app, client):
     prepare_database(app)
 
-    response = post_login(client, "editor01", "correcthorsebattery")
+    response = post_login(client, "editor01", "Quartz!River1-Key")
 
     assert response.status_code == 200
     assert response.get_data(as_text=True).count(
@@ -204,7 +204,7 @@ def test_blocked_accounts_cannot_be_silently_reactivated(app, client):
     assert user["password_hash"] is None
     assert temporary_count == 0
 
-    response = post_login(client, "agent02", "correcthorsebattery")
+    response = post_login(client, "agent02", "Quartz!River1-Key")
     assert "Invalid username or password." in response.get_data(as_text=True)
 
 
