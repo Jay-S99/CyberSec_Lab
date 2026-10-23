@@ -136,6 +136,7 @@ SETTINGS = {
     "password_validity_days": "0",
 }
 
+FORBIDDEN_WORDS_V1_COUNT = 26
 FORBIDDEN_WORDS = (
     "doomvault",
     "hydra",
@@ -163,8 +164,103 @@ FORBIDDEN_WORDS = (
     "lato",
     "jesien",
     "zima",
+    "ironman",
+    "tony",
+    "stark",
+    "tonystark",
+    "captainamerica",
+    "steve",
+    "rogers",
+    "steverogers",
+    "sam",
+    "wilson",
+    "samwilson",
+    "thor",
+    "odinson",
+    "thorodinson",
+    "hulk",
+    "bruce",
+    "banner",
+    "brucebanner",
+    "blackwidow",
+    "natasha",
+    "romanoff",
+    "natasharomanoff",
+    "hawkeye",
+    "clint",
+    "barton",
+    "clintbarton",
+    "scarletwitch",
+    "wanda",
+    "maximoff",
+    "wandamaximoff",
+    "vision",
+    "blackpanther",
+    "tchalla",
+    "t'challa",
+    "t’challa",
+    "spiderman",
+    "spider-man",
+    "peter",
+    "parker",
+    "peterparker",
+    "captainmarvel",
+    "carol",
+    "danvers",
+    "caroldanvers",
+    "antman",
+    "ant-man",
+    "scott",
+    "lang",
+    "scottlang",
+    "wasp",
+    "janet",
+    "vandyne",
+    "janetvandyne",
+    "doctorstrange",
+    "stephen",
+    "strange",
+    "stephenstrange",
+    "warmachine",
+    "james",
+    "rhodes",
+    "jamesrhodes",
+    "falcon",
+    "wintersoldier",
+    "bucky",
+    "barnes",
+    "buckybarnes",
+    "shehulk",
+    "she-hulk",
+    "jennifer",
+    "walters",
+    "jenniferwalters",
+    "moonknight",
+    "marc",
+    "spector",
+    "marcspector",
+    "shangchi",
+    "shang-chi",
+    "shang",
+    "chi",
+    "starlord",
+    "star-lord",
+    "quill",
+    "peterquill",
+    "rocket",
+    "raccoon",
+    "rocketraccoon",
+    "groot",
+    "nebula",
+    "mantis",
+    "okoye",
+    "valkyrie",
+    "nick",
+    "fury",
+    "nickfury",
 )
 FORBIDDEN_WORDS_SEED_MARKER = "forbidden_words_seed_version"
+FORBIDDEN_WORDS_SEED_VERSION = "2"
 
 DOSSIER_IDS = tuple(f"DV-{number:03d}" for number in range(1, 9))
 ORGANIZATIONS = frozenset({"SHIELD", "HYDRA", "SWORD", "UNKNOWN"})
@@ -384,18 +480,17 @@ def _forbidden_dictionary_was_initialized(connection):
 
 def _seed_forbidden_words(connection, timestamp, already_initialized):
     marker = connection.execute(
-        "SELECT 1 FROM settings WHERE key = ?",
+        "SELECT value FROM settings WHERE key = ?",
         (FORBIDDEN_WORDS_SEED_MARKER,),
     ).fetchone()
-    if marker is not None:
+    if marker is not None and marker["value"] == FORBIDDEN_WORDS_SEED_VERSION:
         return
-    if already_initialized:
-        connection.execute(
-            "INSERT INTO settings (key, value) VALUES (?, '1')",
-            (FORBIDDEN_WORDS_SEED_MARKER,),
-        )
-        return
-    for word in FORBIDDEN_WORDS:
+    words = (
+        FORBIDDEN_WORDS[FORBIDDEN_WORDS_V1_COUNT:]
+        if already_initialized
+        else FORBIDDEN_WORDS
+    )
+    for word in words:
         normalized = normalize_forbidden_word(word)
         connection.execute(
             """
@@ -408,8 +503,11 @@ def _seed_forbidden_words(connection, timestamp, already_initialized):
             (normalized, timestamp, normalized),
         )
     connection.execute(
-        "INSERT INTO settings (key, value) VALUES (?, '1')",
-        (FORBIDDEN_WORDS_SEED_MARKER,),
+        """
+        INSERT INTO settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        (FORBIDDEN_WORDS_SEED_MARKER, FORBIDDEN_WORDS_SEED_VERSION),
     )
 
 
