@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block body_class %}admin-page{% endblock %}
 {% block content %}
-<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>Administration</span></nav>
+<nav class="breadcrumbs" aria-label="{{ t('common.breadcrumb') }}"><a href="{{ url_for('auth.home') }}">{{ t('common.command_center') }}</a><span>/</span><span>{{ t('admin.breadcrumb') }}</span></nav>
 <header class="admin-header">
-  <div><p class="eyebrow">Security operations // Restricted control plane</p><p class="admin-brand">ADMINISTRATION</p></div>
-  <nav aria-label="Administration navigation">
+  <div><p class="eyebrow">{{ t('admin.operations_eyebrow') }}</p><p class="admin-brand">{{ t('admin.heading') }}</p></div>
+  <nav aria-label="{{ t('admin.navigation') }}">
     {% if can_manage_users %}
-      <a class="{% if request.endpoint == 'admin.index' %}is-active{% endif %}" href="{{ url_for('admin.index') }}">Overview</a>
-      <a class="{% if request.endpoint in ('admin.users', 'admin.new_user', 'admin.create_user', 'admin.edit_user') %}is-active{% endif %}" href="{{ url_for('admin.users') }}">Users</a>
+      <a class="{% if request.endpoint == 'admin.index' %}is-active{% endif %}"{% if request.endpoint == 'admin.index' %} aria-current="page"{% endif %} href="{{ url_for('admin.index') }}">{{ t('admin.overview') }}</a>
+      <a class="{% if request.endpoint in ('admin.users', 'admin.new_user', 'admin.create_user', 'admin.edit_user') %}is-active{% endif %}"{% if request.endpoint in ('admin.users', 'admin.new_user', 'admin.create_user', 'admin.edit_user') %} aria-current="page"{% endif %} href="{{ url_for('admin.users') }}">{{ t('admin.users') }}</a>
     {% endif %}
     {% if can_manage_security %}
-      <a class="{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %}is-active{% endif %}" href="{{ url_for('admin.security') }}">Security settings</a>
+      <a class="{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %}is-active{% endif %}"{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %} aria-current="page"{% endif %} href="{{ url_for('admin.security') }}">{{ t('admin.security_settings') }}</a>
     {% endif %}
   </nav>
 </header>
@@ -19,7 +19,7 @@
 {% endif %}
 {% if errors %}
   <div role="alert">
-    <p>Please review the following:</p>
+    <p>{{ t('admin.review_errors') }}</p>
     <ul>
       {% for error in errors %}<li>{{ error }}</li>{% endfor %}
     </ul>
