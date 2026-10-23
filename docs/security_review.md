@@ -66,5 +66,3 @@ No Critical or High vulnerabilities were confirmed during this focused review.
 - The symbolic-link regression test may be skipped on Windows hosts that do not
   grant symbolic-link creation privileges; the path checks remain covered by
   direct unit and route tests.
-- The supplied screenshot paths were unavailable during this run, so no images
-  were copied and no broken README image links were added.
