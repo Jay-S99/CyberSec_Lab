@@ -9,6 +9,20 @@ approval workflows.
 The interface uses an original Marvel-inspired visual theme for an unofficial
 educational fan project. DoomVault is not affiliated with Marvel or Disney.
 
+## Screenshots
+
+### Secure Authentication Terminal
+
+![DoomVault secure authentication terminal](docs/screenshots/login.png)
+
+### Intelligence Command Center
+
+![DoomVault administrator command center](docs/screenshots/command-center.png)
+
+### Authorized Workspaces & Access Profile
+
+![DoomVault authorized workspaces and administrator access profile](docs/screenshots/authorized-workspaces.png)
+
 ## Key features
 
 - English and Polish interfaces with a CSRF-protected language switcher
