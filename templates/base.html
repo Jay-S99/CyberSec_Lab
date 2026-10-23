@@ -3,12 +3,81 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0e14">
   <title>{% block title %}DoomVault{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="background-grid" aria-hidden="true"></div>
+  {% set shell_preference %}{% block application_shell %}true{% endblock %}{% endset %}
+  {% set shell_visible = g.user and not g.password_change_required and request.endpoint != 'auth.change_password' and shell_preference|trim == 'true' %}
+  {% if shell_visible %}
+    <header class="app-header">
+      <a class="brand-lockup" href="{{ url_for('auth.home') }}" aria-label="DoomVault command center">
+        <span class="brand-mark" aria-hidden="true"><span>DV</span></span>
+        <span>
+          <strong>DOOMVAULT</strong>
+          <small>Strategic Intelligence Network</small>
+        </span>
+      </a>
+      <div class="header-status">
+        <span class="status-signal" aria-hidden="true"></span>
+        <span><small>Secure session</small><strong>Authenticated</strong></span>
+      </div>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
+        <span></span><span></span><span></span><span class="visually-hidden">Toggle navigation</span>
+      </button>
+    </header>
+    <div class="app-shell">
+      <aside class="sidebar" id="primary-navigation">
+        <div class="operator-card">
+          <span class="eyebrow">Active operator</span>
+          <strong>{{ g.user.username }}</strong>
+          <span class="clearance-badge">{{ (current_role_name or 'authorized')|upper }} CLEARANCE</span>
+        </div>
+        <nav class="primary-nav" aria-label="Primary navigation">
+          <a class="{% if request.endpoint == 'auth.home' %}is-active{% endif %}" href="{{ url_for('auth.home') }}"><span class="nav-index">01</span>Command center</a>
+          {% if can_browse_dossiers %}
+            <a class="{% if request.blueprint == 'dossiers' and request.endpoint != 'dossiers.review' %}is-active{% endif %}" href="{{ url_for('dossiers.index') }}"><span class="nav-index">02</span>Intelligence archive</a>
+          {% endif %}
+          {% if can_create_incident %}
+            <a class="{% if request.endpoint in ('incidents.index', 'incidents.create') %}is-active{% endif %}" href="{{ url_for('incidents.index') }}"><span class="nav-index">03</span>Incident reports</a>
+          {% endif %}
+          {% if can_review_incidents %}
+            <a class="{% if request.endpoint == 'incidents.review' %}is-active{% endif %}" href="{{ url_for('incidents.review') }}"><span class="nav-index">04</span>Incident queue</a>
+          {% endif %}
+          {% if can_review_dossiers %}
+            <a class="{% if request.endpoint == 'dossiers.review' %}is-active{% endif %}" href="{{ url_for('dossiers.review') }}"><span class="nav-index">05</span>Dossier review</a>
+          {% endif %}
+          {% if can_manage_users or can_manage_security %}
+            <a class="{% if request.blueprint == 'admin' %}is-active{% endif %}" href="{% if can_manage_users %}{{ url_for('admin.index') }}{% else %}{{ url_for('admin.security') }}{% endif %}"><span class="nav-index">06</span>Administration</a>
+          {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+          <a href="{{ url_for('auth.change_password') }}">Account security</a>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="text-button" type="submit">Terminate session</button>
+          </form>
+        </div>
+      </aside>
+      <main class="main-content" id="main-content">
+  {% else %}
+    <main class="standalone-main" id="main-content">
+  {% endif %}
+        {% block content %}{% endblock %}
+  {% if shell_visible %}
+        <footer class="app-footer">
+          <span>DOOMVAULT // INTERNAL NETWORK</span>
+          <span>Unofficial educational fan project. Not affiliated with Marvel.</span>
+        </footer>
+      </main>
+    </div>
+  {% else %}
+    </main>
+  {% endif %}
 </body>
 </html>
