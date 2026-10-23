@@ -6,6 +6,7 @@ from auth.login import init_app as init_login
 from auth.temp_passwords import init_app as init_provisioning
 from config import Config
 from database import get_db, init_app as init_database
+from localization import init_app as init_localization
 from modules.admin import bp as admin_blueprint
 from modules.dossiers import bp as dossiers_blueprint
 from modules.incidents import bp as incidents_blueprint
@@ -23,6 +24,7 @@ def create_app(config_class=Config):
     init_seed(application)
     init_login(application)
     init_provisioning(application)
+    init_localization(application)
     application.register_blueprint(admin_blueprint)
     application.register_blueprint(dossiers_blueprint)
     application.register_blueprint(incidents_blueprint)

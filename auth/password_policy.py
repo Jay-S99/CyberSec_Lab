@@ -19,7 +19,7 @@ class PolicyViolation:
         self.code = code
         self.params = params
 
-    def message(self, language="en"):
+    def message(self, language=None):
         return translate(self.code, language, **self.params)
 
 
@@ -31,7 +31,7 @@ class PolicyResult:
     def accepted(self):
         return not self.violations
 
-    def messages(self, language="en"):
+    def messages(self, language=None):
         return tuple(item.message(language) for item in self.violations)
 
 

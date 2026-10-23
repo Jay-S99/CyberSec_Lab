@@ -49,6 +49,7 @@ from auth.temp_passwords import (
     claim_unused_temporary_password,
 )
 from database import format_utc, get_db, immediate_transaction, utc_now
+from localization import localize_context
 from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
 from security.security_log import record_session_event
 from security.responses import (
@@ -59,7 +60,12 @@ from security.responses import (
 
 bp = Blueprint("auth", __name__)
 
-_PUBLIC_ENDPOINTS = {"auth.login", "health", "static"}
+_PUBLIC_ENDPOINTS = {
+    "auth.login",
+    "health",
+    "localization.set_language",
+    "static",
+}
 _SETUP_ENDPOINTS = {"auth.change_password", "auth.logout"}
 _NOTICES = {"password-updated": "password_updated"}
 
@@ -495,6 +501,7 @@ def _replace_password_and_sessions(
 def _render(template, status=200, **context):
     token = new_csrf_token()
     context["csrf_token"] = token
+    context = localize_context(context)
     response = make_response(render_template(template, **context), status)
     set_csrf_cookie(response, token)
     return response
