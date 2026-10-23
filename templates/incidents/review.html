@@ -2,15 +2,15 @@
 {% block title %}Incident review - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<header class="dossier-header"><div><p class="dossier-kicker">Editor workflow</p><h1>Incident review queue</h1><p>New employee reports available for dossier preparation.</p></div></header>
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>Incident review</span></nav>
+<header class="page-header"><div><p class="eyebrow">Editor workflow // Intake queue</p><h1>Incident review <span>queue</span></h1><p>New employee reports available for dossier preparation.</p></div></header>
 {% if incidents %}
-<div class="dossier-table-scroll"><table class="dossier-table">
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="Incident review queue"><table class="data-table">
   <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Created</th></tr></thead>
   <tbody>{% for incident in incidents %}<tr>
-    <th><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}">{{ display_identifier(incident.id) }}</a></th>
-    <td>{{ incident.title }}</td><td><span class="dossier-badge">{{ incident.status }}</span></td><td>{{ incident.created_at }}</td>
+    <th class="record-id"><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}">{{ display_identifier(incident.id) }}</a></th>
+    <td>{{ incident.title }}</td><td><span class="badge status-{{ incident.status|lower }}">{{ incident.status }}</span></td><td class="technical-text">{{ incident.created_at }}</td>
   </tr>{% endfor %}</tbody>
 </table></div>
-{% else %}<p class="dossier-empty">No new incident reports are awaiting review.</p>{% endif %}
-<p><a href="{{ url_for('auth.home') }}">Return to DoomVault</a></p>
+{% else %}<div class="empty-state"><span aria-hidden="true">✓</span><h2>Queue clear</h2><p>No new incident reports are awaiting review.</p></div>{% endif %}
 {% endblock %}
