@@ -3,12 +3,14 @@
 {% block admin_content %}
 <div class="admin-heading">
   <div>
-    <h1>User management</h1>
+    <p class="eyebrow">Identity control // Operator directory</p>
+    <h1>User <span>management</span></h1>
     <p class="admin-muted">Review non-deleted accounts and manage their access.</p>
   </div>
-  <a class="admin-button" href="{{ url_for('admin.new_user') }}">Create user</a>
+  <a class="button button-primary" href="{{ url_for('admin.new_user') }}">Create user <span aria-hidden="true">＋</span></a>
 </div>
-<form class="admin-filters" method="get" action="{{ url_for('admin.users') }}">
+<form class="filter-panel admin-filters" method="get" action="{{ url_for('admin.users') }}">
+  <div class="filter-heading"><span class="section-number">DIRECTORY FILTER</span><strong>Refine operator query</strong></div>
   <div>
     <label for="search">Username</label>
     <input id="search" name="search" type="search" value="{{ filters.search }}" placeholder="Search usernames">
@@ -32,12 +34,12 @@
     </select>
   </div>
   <div class="admin-filter-actions">
-    <button type="submit">Filter users</button>
-    <a href="{{ url_for('admin.users') }}">Clear</a>
+    <button class="button button-primary" type="submit">Filter users</button>
+    <a class="button button-ghost" href="{{ url_for('admin.users') }}">Clear</a>
   </div>
 </form>
-<div class="admin-table-scroll" tabindex="0" role="region" aria-label="User accounts">
-  <table class="admin-table">
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="User accounts">
+  <table class="data-table admin-table">
     <caption>{{ users|length }} account{% if users|length != 1 %}s{% endif %} found</caption>
     <thead>
       <tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Created (UTC)</th><th scope="col">Actions</th></tr>
@@ -48,7 +50,7 @@
         {% set is_permanent = user.username|upper == 'ADMIN' %}
         <tr>
           <th scope="row">
-            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ user.username }}</a>
+            <a class="record-id" href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ user.username }}</a>
             {% if is_self %}<span class="admin-muted">(you)</span>{% endif %}
             {% if is_permanent %}<span class="admin-protected">Protected identity</span>{% endif %}
           </th>
@@ -57,7 +59,7 @@
           <td class="admin-date">{{ user.created_at }}</td>
           <td>
             <div class="admin-row-actions">
-              <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+              <a class="table-action" href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
               <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button class="admin-secondary" type="submit">{% if user.account_status == 'pending' %}Generate credential{% else %}Reset password{% endif %}</button>
@@ -83,7 +85,7 @@
                       <input id="confirm-delete-{{ user.id }}" name="confirm_delete" type="checkbox" value="yes" required>
                       <span>I confirm deletion of {{ user.username }}.</span>
                     </label>
-                    <button class="admin-danger" type="submit">Delete {{ user.username }}</button>
+                  <button class="button button-danger" type="submit">Delete {{ user.username }}</button>
                   </form>
                 </details>
               {% endif %}

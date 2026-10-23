@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 
 from database import get_db, init_db
-from seed import seed_database
+from seed import FORBIDDEN_WORDS, FORBIDDEN_WORDS_V1_COUNT, seed_database
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,7 +54,7 @@ EXPECTED_SETTINGS = {
     "password_history_limit": "5",
     "session_inactivity_timeout_minutes": "15",
     "password_validity_days": "0",
-    "forbidden_words_seed_version": "1",
+    "forbidden_words_seed_version": "2",
 }
 
 EXPECTED_FORBIDDEN_WORDS = {
@@ -84,6 +84,100 @@ EXPECTED_FORBIDDEN_WORDS = {
     "lato",
     "jesien",
     "zima",
+    "ironman",
+    "tony",
+    "stark",
+    "tonystark",
+    "captainamerica",
+    "steve",
+    "rogers",
+    "steverogers",
+    "sam",
+    "wilson",
+    "samwilson",
+    "thor",
+    "odinson",
+    "thorodinson",
+    "hulk",
+    "bruce",
+    "banner",
+    "brucebanner",
+    "blackwidow",
+    "natasha",
+    "romanoff",
+    "natasharomanoff",
+    "hawkeye",
+    "clint",
+    "barton",
+    "clintbarton",
+    "scarletwitch",
+    "wanda",
+    "maximoff",
+    "wandamaximoff",
+    "vision",
+    "blackpanther",
+    "tchalla",
+    "t'challa",
+    "t’challa",
+    "spiderman",
+    "spider-man",
+    "peter",
+    "parker",
+    "peterparker",
+    "captainmarvel",
+    "carol",
+    "danvers",
+    "caroldanvers",
+    "antman",
+    "ant-man",
+    "scott",
+    "lang",
+    "scottlang",
+    "wasp",
+    "janet",
+    "vandyne",
+    "janetvandyne",
+    "doctorstrange",
+    "stephen",
+    "strange",
+    "stephenstrange",
+    "warmachine",
+    "james",
+    "rhodes",
+    "jamesrhodes",
+    "falcon",
+    "wintersoldier",
+    "bucky",
+    "barnes",
+    "buckybarnes",
+    "shehulk",
+    "she-hulk",
+    "jennifer",
+    "walters",
+    "jenniferwalters",
+    "moonknight",
+    "marc",
+    "spector",
+    "marcspector",
+    "shangchi",
+    "shang-chi",
+    "shang",
+    "chi",
+    "starlord",
+    "star-lord",
+    "quill",
+    "peterquill",
+    "rocket",
+    "raccoon",
+    "rocketraccoon",
+    "groot",
+    "nebula",
+    "mantis",
+    "okoye",
+    "valkyrie",
+    "nick",
+    "fury",
+    "nickfury",
 }
 
 EXPECTED_DOSSIERS = {
@@ -369,7 +463,7 @@ def test_repeated_seed_does_not_restore_deleted_forbidden_words(seeded_app):
     assert count == 0
 
 
-def test_upgrade_marker_preserves_an_already_empty_dictionary(seeded_app):
+def test_dictionary_upgrade_adds_only_new_superhero_words(seeded_app):
     with seeded_app.app_context():
         connection = get_db()
         connection.execute("DELETE FROM forbidden_words")
@@ -380,16 +474,17 @@ def test_upgrade_marker_preserves_an_already_empty_dictionary(seeded_app):
 
         seed_database()
 
-        count = connection.execute(
-            "SELECT COUNT(*) AS total FROM forbidden_words"
-        ).fetchone()["total"]
+        words = {
+            row["word"]
+            for row in connection.execute("SELECT word FROM forbidden_words")
+        }
         marker = connection.execute(
             "SELECT value FROM settings "
             "WHERE key = 'forbidden_words_seed_version'"
         ).fetchone()
 
-    assert count == 0
-    assert marker["value"] == "1"
+    assert words == set(FORBIDDEN_WORDS[FORBIDDEN_WORDS_V1_COUNT:])
+    assert marker["value"] == "2"
 
 
 def test_repeated_seed_preserves_account_state(seeded_app):

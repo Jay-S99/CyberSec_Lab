@@ -3,15 +3,16 @@
 {% block admin_content %}
 <div class="admin-heading">
   <div>
-    <h1>Security settings</h1>
+    <p class="eyebrow">Security operations // Policy control</p>
+    <h1>Security <span>settings</span></h1>
     <p>Configure organization password and session policies.</p>
   </div>
-  <a class="admin-button" href="{{ url_for('admin.forbidden_words') }}">Manage forbidden words</a>
+  <a class="button button-primary" href="{{ url_for('admin.forbidden_words') }}">Forbidden words <span aria-hidden="true">→</span></a>
 </div>
 
 <div class="admin-policy-grid">
   <section class="admin-policy-card" aria-labelledby="forbidden-policy-heading">
-    <h2 id="forbidden-policy-heading">Forbidden-word policy</h2>
+    <div class="policy-icon" aria-hidden="true">01</div><h2 id="forbidden-policy-heading">Forbidden-word policy</h2>
     <p>Reject future permanent passwords that contain an organization-specific dictionary entry.</p>
     <form method="post" action="{{ url_for('admin.update_forbidden_policy') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -22,12 +23,12 @@
       </select>
       {% if field_errors.forbidden_words_enabled %}<p class="admin-field-error">{{ field_errors.forbidden_words_enabled }}</p>{% endif %}
       <p id="forbidden-policy-help" class="admin-muted">Disabling this check does not disable minimum length or password history protection.</p>
-      <button type="submit">Save policy state</button>
+      <button class="button button-primary" type="submit">Save policy state</button>
     </form>
   </section>
 
   <section class="admin-policy-card" aria-labelledby="minimum-length-heading">
-    <h2 id="minimum-length-heading">Minimum password length</h2>
+    <div class="policy-icon" aria-hidden="true">02</div><h2 id="minimum-length-heading">Minimum password length</h2>
     <p>Applies to future permanent password setup and changes. Existing passwords are not invalidated.</p>
     <form method="post" action="{{ url_for('admin.update_minimum_password_length') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -35,12 +36,12 @@
       <input id="minimum-password-length" name="minimum_password_length" type="number" min="{{ minimum_password_length }}" max="{{ maximum_password_length }}" step="1" value="{{ settings.minimum_password_length }}" required>
       {% if field_errors.minimum_password_length %}<p class="admin-field-error">{{ field_errors.minimum_password_length }}</p>{% endif %}
       <p class="admin-muted">Variant 10 requires at least {{ minimum_password_length }} characters. Supported maximum: {{ maximum_password_length }}.</p>
-      <button type="submit">Save minimum length</button>
+      <button class="button button-primary" type="submit">Save minimum length</button>
     </form>
   </section>
 
   <section class="admin-policy-card" aria-labelledby="password-validity-heading">
-    <h2 id="password-validity-heading">Password validity</h2>
+    <div class="policy-icon" aria-hidden="true">03</div><h2 id="password-validity-heading">Password validity</h2>
     <p>Set periodic validity for permanent passwords. Users with expired passwords can only replace them or sign out.</p>
     <form method="post" action="{{ url_for('admin.update_password_validity') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -48,12 +49,12 @@
       <input id="password-validity-days" name="password_validity_days" type="number" min="0" max="{{ maximum_password_validity_days }}" step="1" value="{{ settings.password_validity_days }}" required>
       {% if field_errors.password_validity_days %}<p class="admin-field-error">{{ field_errors.password_validity_days }}</p>{% endif %}
       <p class="admin-muted">Zero disables periodic expiration and is the recommended default. Supported maximum: {{ maximum_password_validity_days }} days.</p>
-      <button type="submit">Save password validity</button>
+      <button class="button button-primary" type="submit">Save password validity</button>
     </form>
   </section>
 
   <section class="admin-policy-card" aria-labelledby="session-timeout-heading">
-    <h2 id="session-timeout-heading">Session security</h2>
+    <div class="policy-icon" aria-hidden="true">04</div><h2 id="session-timeout-heading">Session security</h2>
     <p>End server-side sessions after a period without authenticated activity.</p>
     <form method="post" action="{{ url_for('admin.update_session_timeout') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -61,13 +62,13 @@
       <input id="session-timeout-minutes" name="session_inactivity_timeout_minutes" type="number" min="1" max="{{ maximum_session_timeout_minutes }}" step="1" value="{{ settings.session_inactivity_timeout_minutes }}" required>
       {% if field_errors.session_inactivity_timeout_minutes %}<p class="admin-field-error">{{ field_errors.session_inactivity_timeout_minutes }}</p>{% endif %}
       <p class="admin-muted">Existing live sessions use the new policy on their next server-side validation. Expired and revoked sessions remain unusable.</p>
-      <button type="submit">Save session timeout</button>
+      <button class="button button-primary" type="submit">Save session timeout</button>
     </form>
   </section>
 </div>
 
 <section class="admin-readonly" aria-labelledby="temporary-password-heading">
-  <h2 id="temporary-password-heading">Temporary credentials</h2>
+  <div class="panel-heading"><span>LOCKED</span><h2 id="temporary-password-heading">Temporary credentials</h2></div>
   <p><strong>{{ settings.temporary_password_validity_hours }} hours</strong> maximum validity. This safety limit is read-only. Temporary credentials still require a permanent password at first sign-in.</p>
 </section>
 {% endblock %}

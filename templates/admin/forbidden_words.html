@@ -3,10 +3,11 @@
 {% block admin_content %}
 <div class="admin-heading">
   <div>
-    <h1>Forbidden words</h1>
+    <p class="eyebrow">Security policy // Restricted dictionary</p>
+    <h1>Forbidden <span>words</span></h1>
     <p>Manage organization-specific terms rejected in future permanent passwords while the policy is enabled.</p>
   </div>
-  <a href="{{ url_for('admin.security') }}">Back to security settings</a>
+  <a class="button button-ghost" href="{{ url_for('admin.security') }}">Back to security settings</a>
 </div>
 
 <section class="admin-policy-card admin-add-word" aria-labelledby="add-word-heading">
@@ -16,12 +17,12 @@
     <label for="new-forbidden-word">Word or token</label>
     <input id="new-forbidden-word" name="word" type="text" maxlength="{{ maximum_word_length }}" value="{{ new_word }}" required>
     <p class="admin-muted">Entries are trimmed and matched case-insensitively. Unicode-equivalent and accented/unaccented Polish forms are treated consistently.</p>
-    <button type="submit">Add forbidden word</button>
+    <button class="button button-primary" type="submit">Add forbidden word</button>
   </form>
 </section>
 
-<div class="admin-table-scroll">
-  <table class="admin-table admin-words-table">
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="Forbidden-word dictionary">
+  <table class="data-table admin-table admin-words-table">
     <caption>{{ words|length }} forbidden {{ "entry" if words|length == 1 else "entries" }}. Changes apply to subsequent password validation.</caption>
     <thead>
       <tr>
@@ -52,7 +53,7 @@
                   <input id="confirm-delete-word-{{ entry.id }}" name="confirm_delete" type="checkbox" value="yes" required>
                   <span>I confirm deletion of {{ entry.word }}.</span>
                 </label>
-                <button class="admin-danger" type="submit">Delete</button>
+                <button class="button button-danger" type="submit">Delete</button>
               </form>
             </details>
           </td>

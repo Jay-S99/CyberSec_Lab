@@ -2,9 +2,10 @@
 {% block title %}{{ heading }} - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<header class="dossier-header">
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><a href="{{ url_for('dossiers.index') }}">Archive</a><span>/</span><span>{{ heading }}</span></nav>
+<header class="page-header">
   <div>
-    <p class="dossier-kicker">Authorized editor workspace</p>
+    <p class="eyebrow">Authorized editor workspace // Controlled input</p>
     <h1>{{ heading }}</h1>
     <p>Draft ownership, status, and approval metadata are assigned by the server.</p>
   </div>
@@ -16,15 +17,16 @@
   </div>
 {% endif %}
 
-<form class="dossier-form" method="post" action="{% if dossier %}{{ url_for('dossiers.edit', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.create') }}{% endif %}">
+<form class="form-panel" method="post" action="{% if dossier %}{{ url_for('dossiers.edit', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.create') }}{% endif %}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   {% if dossier %}<input type="hidden" name="updated_at" value="{{ values.updated_at }}">{% endif %}
 
-  <label for="title">Title
+  <div class="form-section-label"><span>01</span><strong>File identification</strong></div>
+  <label for="title">Dossier title
     <input id="title" name="title" maxlength="{{ limits.TITLE_MAX_LENGTH }}" required value="{{ values.title or '' }}">
   </label>
 
-  <div class="dossier-form-grid">
+  <div class="form-grid">
     <label for="organization">Organization
       <select id="organization" name="organization" required>
         {% for option in organizations %}
@@ -51,19 +53,20 @@
     </label>
   </div>
 
+  <div class="form-section-label"><span>02</span><strong>Intelligence content</strong></div>
   <label for="summary">Summary
     <textarea id="summary" name="summary" maxlength="{{ limits.SUMMARY_MAX_LENGTH }}" rows="7" required>{{ values.summary or '' }}</textarea>
   </label>
-  <label for="observations">Observations <span class="dossier-help">one per line</span>
+  <label for="observations">Observations <span class="field-help">one per line</span>
     <textarea id="observations" name="observations" rows="7" required>{{ values.observations or '' }}</textarea>
   </label>
   <label for="conclusion">Conclusion
     <textarea id="conclusion" name="conclusion" maxlength="{{ limits.CONCLUSION_MAX_LENGTH }}" rows="5" required>{{ values.conclusion or '' }}</textarea>
   </label>
 
-  <div class="dossier-form-actions">
-    <button type="submit">{{ submit_label }}</button>
-    <a href="{% if dossier %}{{ url_for('dossiers.detail', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.index') }}{% endif %}">Cancel</a>
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">{{ submit_label }}</button>
+    <a class="button button-ghost" href="{% if dossier %}{{ url_for('dossiers.detail', dossier_id=dossier.id) }}{% else %}{{ url_for('dossiers.index') }}{% endif %}">Cancel</a>
   </div>
 </form>
 {% endblock %}

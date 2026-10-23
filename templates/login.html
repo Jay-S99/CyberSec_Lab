@@ -1,28 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Sign in - DoomVault{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 {% block content %}
-<h1>DoomVault</h1>
-<h2>Sign in</h2>
-{% if notice %}
-  <p role="status">{{ notice }}</p>
-{% endif %}
-{% if errors %}
-  <div role="alert">
-    {% for error in errors %}
-      <p>{{ error }}</p>
-    {% endfor %}
+<section class="auth-terminal" aria-labelledby="login-title">
+  <div class="auth-visual" aria-hidden="true">
+    <div class="auth-emblem"><span>DV</span></div>
+    <div class="radar-lines"></div>
+    <div class="auth-coordinates">NODE 07 // GATEWAY ACTIVE<br>ENCRYPTION LAYER // VERIFIED</div>
   </div>
-{% endif %}
-<form method="post" action="{{ url_for('auth.login') }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <div>
-    <label for="username">Username</label>
-    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required>
+  <div class="auth-panel">
+    <div class="auth-brand">
+      <span class="eyebrow">Strategic Intelligence Network</span>
+      <h1>DOOM<span>VAULT</span></h1>
+      <p>Restricted access terminal</p>
+    </div>
+    <div class="classification-strip"><span>Classified system</span><span>Authorized personnel only</span></div>
+    <div class="auth-heading">
+      <span class="section-number">01 / IDENTITY</span>
+      <h2 id="login-title">Identity verification</h2>
+      <p>Enter your assigned credentials to establish a secure session.</p>
+    </div>
+    {% if notice %}
+      <p role="status">{{ notice }}</p>
+    {% endif %}
+    {% if errors %}
+      <div role="alert">
+        {% for error in errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="username">Operator ID</label>
+      <div class="field-frame">
+        <span aria-hidden="true">ID</span>
+        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" placeholder="Enter username" required autofocus>
+      </div>
+      <label for="password">Access key</label>
+      <div class="field-frame">
+        <span aria-hidden="true">••</span>
+        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" placeholder="Enter password" required>
+      </div>
+      <button class="button button-primary button-full" type="submit"><span>Authenticate</span><span aria-hidden="true">→</span></button>
+    </form>
+    <p class="auth-legal">Access is monitored and security events are recorded. Never share credentials.</p>
   </div>
-  <div>
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required>
-  </div>
-  <button type="submit">Sign in</button>
-</form>
+</section>
+<p class="fan-disclaimer">Unofficial educational fan project. Not affiliated with Marvel.</p>
 {% endblock %}
