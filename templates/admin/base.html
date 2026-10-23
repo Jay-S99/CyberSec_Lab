@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% block body_class %}admin-page{% endblock %}
 {% block content %}
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>Administration</span></nav>
 <header class="admin-header">
-  <p class="admin-brand">DoomVault / Administration</p>
+  <div><p class="eyebrow">Security operations // Restricted control plane</p><p class="admin-brand">ADMINISTRATION</p></div>
   <nav aria-label="Administration navigation">
     {% if can_manage_users %}
-      <a href="{{ url_for('admin.index') }}">Overview</a>
-      <a href="{{ url_for('admin.users') }}">Users</a>
+      <a class="{% if request.endpoint == 'admin.index' %}is-active{% endif %}" href="{{ url_for('admin.index') }}">Overview</a>
+      <a class="{% if request.endpoint in ('admin.users', 'admin.new_user', 'admin.create_user', 'admin.edit_user') %}is-active{% endif %}" href="{{ url_for('admin.users') }}">Users</a>
     {% endif %}
     {% if can_manage_security %}
-      <a href="{{ url_for('admin.security') }}">Security settings</a>
+      <a class="{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %}is-active{% endif %}" href="{{ url_for('admin.security') }}">Security settings</a>
     {% endif %}
-    <a href="{{ url_for('auth.home') }}">Return to DoomVault</a>
   </nav>
 </header>
 {% if notice %}
