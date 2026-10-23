@@ -1,6 +1,6 @@
 import sqlite3
 
-from flask import current_app, g, jsonify, render_template
+from flask import current_app, g, jsonify
 
 from database import get_db
 from security.responses import wants_json_response
@@ -21,7 +21,9 @@ def forbidden(_error):
             current_app.logger.error("Authorization event could not be recorded.")
     if wants_json_response():
         return jsonify(error="forbidden", message="Access denied."), 403
-    return render_template("errors/403.html"), 403
+    from auth.login import _render
+
+    return _render("errors/403.html", status=403)
 
 
 def init_app(app):
@@ -29,7 +31,9 @@ def init_app(app):
     app.register_error_handler(404, not_found)
 
 
-def not_found(error):
+def not_found(_error):
     if wants_json_response():
         return jsonify(error="not_found"), 404
-    return error.get_response()
+    from auth.login import _render
+
+    return _render("errors/404.html", status=404)
