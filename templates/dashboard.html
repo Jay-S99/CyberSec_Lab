@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Command Center - DoomVault{% endblock %}
+{% block title %}{{ t('dashboard.title') }} - DoomVault{% endblock %}
 {% block content %}
 {% if notice %}
   <p role="status">{{ notice }}</p>
@@ -13,54 +13,54 @@
 {% endif %}
 <header class="command-hero">
   <div class="hero-copy">
-    <span class="eyebrow">Secure node // Warsaw sector</span>
-    <h1>COMMAND<br><span>CENTER</span></h1>
-    <p>Welcome back, <strong>{{ username }}</strong>. Your authenticated workspace is ready.</p>
+    <span class="eyebrow">{{ t('dashboard.node') }}</span>
+    <h1>{{ t('dashboard.heading_line_one') }}<br><span>{{ t('dashboard.heading_line_two') }}</span></h1>
+    <p>{{ t('dashboard.welcome', username=username) }}</p>
     <div class="hero-status-row">
-      <span><i></i>Session verified</span>
-      <span>{{ (current_role_name or 'authorized')|upper }} clearance</span>
+      <span><i></i>{{ t('dashboard.session_verified') }}</span>
+      <span>{{ t('nav.clearance', role=(current_role_name or 'authorized')|role_label) }}</span>
     </div>
   </div>
   <div class="hero-instrument" aria-hidden="true">
     <div class="instrument-ring"><span>DV</span></div>
-    <div class="instrument-data"><span>NETWORK</span><strong>ONLINE</strong><small>SECURE CHANNEL ESTABLISHED</small></div>
+    <div class="instrument-data"><span>{{ t('dashboard.network') }}</span><strong>{{ t('dashboard.online') }}</strong><small>{{ t('dashboard.channel_established') }}</small></div>
   </div>
 </header>
 
 <section class="dashboard-section" aria-labelledby="operations-heading">
   <div class="section-heading">
-    <div><span class="section-number">01 / OPERATIONS</span><h2 id="operations-heading">Authorized workspaces</h2></div>
-    <p>Available modules reflect your current access profile.</p>
+    <div><span class="section-number">{{ t('dashboard.operations_section') }}</span><h2 id="operations-heading">{{ t('dashboard.workspaces') }}</h2></div>
+    <p>{{ t('dashboard.workspaces_intro') }}</p>
   </div>
   <div class="action-grid">
     {% if can_browse_dossiers %}
-      <a class="action-card action-card-primary" href="{{ url_for('dossiers.index') }}"><span class="card-code">ARCHIVE // 001</span><h3>Intelligence archive</h3><p>Search and review dossiers available to your clearance.</p><span class="card-link">Open archive <b>→</b></span></a>
+      <a class="action-card action-card-primary" href="{{ url_for('dossiers.index') }}"><span class="card-code">{{ t('dashboard.code_archive') }}</span><h3>{{ t('dashboard.archive_title') }}</h3><p>{{ t('dashboard.archive_description') }}</p><span class="card-link">{{ t('dashboard.open_archive') }} <b>→</b></span></a>
     {% endif %}
     {% if can_create_incident %}
-      <a class="action-card" href="{{ url_for('incidents.create') }}"><span class="card-code">INTAKE // 002</span><h3>Submit incident</h3><p>Transmit a private incident report to the editorial queue.</p><span class="card-link">New report <b>→</b></span></a>
-      <a class="action-card" href="{{ url_for('incidents.index') }}"><span class="card-code">HISTORY // 003</span><h3>My reports</h3><p>Review the status of your submitted incident reports.</p><span class="card-link">View reports <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('incidents.create') }}"><span class="card-code">{{ t('dashboard.code_intake') }}</span><h3>{{ t('dashboard.submit_incident') }}</h3><p>{{ t('dashboard.submit_incident_description') }}</p><span class="card-link">{{ t('dashboard.new_report') }} <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('incidents.index') }}"><span class="card-code">{{ t('dashboard.code_history') }}</span><h3>{{ t('dashboard.my_reports') }}</h3><p>{{ t('dashboard.my_reports_description') }}</p><span class="card-link">{{ t('dashboard.view_reports') }} <b>→</b></span></a>
     {% endif %}
     {% if can_review_incidents %}
-      <a class="action-card" href="{{ url_for('incidents.review') }}"><span class="card-code">QUEUE // 004</span><h3>Incident review</h3><p>Assess incoming reports and prepare intelligence drafts.</p><span class="card-link">Open queue <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('incidents.review') }}"><span class="card-code">{{ t('dashboard.code_queue') }}</span><h3>{{ t('dashboard.incident_review') }}</h3><p>{{ t('dashboard.incident_review_description') }}</p><span class="card-link">{{ t('dashboard.open_queue') }} <b>→</b></span></a>
     {% endif %}
     {% if can_review_dossiers %}
-      <a class="action-card" href="{{ url_for('dossiers.review') }}"><span class="card-code">REVIEW // 005</span><h3>Dossier approval</h3><p>Evaluate classified dossiers awaiting authorization.</p><span class="card-link">Review dossiers <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('dossiers.review') }}"><span class="card-code">{{ t('dashboard.code_review') }}</span><h3>{{ t('dashboard.dossier_approval') }}</h3><p>{{ t('dashboard.dossier_approval_description') }}</p><span class="card-link">{{ t('dashboard.review_dossiers') }} <b>→</b></span></a>
     {% endif %}
     {% if can_create_dossier %}
-      <a class="action-card" href="{{ url_for('dossiers.create') }}"><span class="card-code">EDITOR // 006</span><h3>Create dossier</h3><p>Open a controlled workspace for a new intelligence file.</p><span class="card-link">Create draft <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('dossiers.create') }}"><span class="card-code">{{ t('dashboard.code_editor') }}</span><h3>{{ t('dashboard.create_dossier') }}</h3><p>{{ t('dashboard.create_dossier_description') }}</p><span class="card-link">{{ t('dashboard.create_draft') }} <b>→</b></span></a>
     {% endif %}
     {% if can_manage_users %}
-      <a class="action-card" href="{{ url_for('admin.index') }}"><span class="card-code">ADMIN // 007</span><h3>User command</h3><p>Manage operator identities, roles, and account states.</p><span class="card-link">Manage users <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('admin.index') }}"><span class="card-code">{{ t('dashboard.code_admin') }}</span><h3>{{ t('dashboard.user_command') }}</h3><p>{{ t('dashboard.user_command_description') }}</p><span class="card-link">{{ t('dashboard.manage_users') }} <b>→</b></span></a>
     {% endif %}
     {% if can_manage_security %}
-      <a class="action-card" href="{{ url_for('admin.security') }}"><span class="card-code">POLICY // 008</span><h3>Security policy</h3><p>Configure password and session protection controls.</p><span class="card-link">Open controls <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('admin.security') }}"><span class="card-code">{{ t('dashboard.code_policy') }}</span><h3>{{ t('dashboard.security_policy') }}</h3><p>{{ t('dashboard.security_policy_description') }}</p><span class="card-link">{{ t('dashboard.open_controls') }} <b>→</b></span></a>
     {% endif %}
   </div>
 </section>
 
 <section class="clearance-panel">
-  <div><span class="section-number">02 / SECURITY CLEARANCE</span><h2>{{ (current_role_name or 'Authorized')|title }} access profile</h2></div>
-  <p>Navigation is filtered by permission. Every request is independently authorized by the server.</p>
-  <span class="clearance-seal">VERIFIED</span>
+  <div><span class="section-number">{{ t('dashboard.clearance_section') }}</span><h2>{{ t('dashboard.access_profile', role=(current_role_name or 'authorized')|role_label) }}</h2></div>
+  <p>{{ t('dashboard.authorization_note') }}</p>
+  <span class="clearance-seal">{{ t('dashboard.verified') }}</span>
 </section>
 {% endblock %}
