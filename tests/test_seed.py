@@ -58,6 +58,9 @@ EXPECTED_SETTINGS = {
 }
 
 EXPECTED_FORBIDDEN_WORDS = {
+    "strongestavenger",
+    "strongest-avenger",
+    "strongest_avenger",
     "doomvault",
     "hydra",
     "shield",

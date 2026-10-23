@@ -20,7 +20,7 @@ from tests.helpers import (
 )
 
 
-PERMANENT = "correcthorsebattery"
+PERMANENT = "Quartz!River1-Key"
 
 
 def test_valid_permanent_credentials_authenticate(app, client):
@@ -34,8 +34,8 @@ def test_valid_permanent_credentials_authenticate(app, client):
     assert response.status_code == 303
     assert location_path(response) == "/"
     assert home.status_code == 200
-    assert "Authenticated session established." in page_text(home)
-    assert "Signed in as ADMIN." in page_text(home)
+    assert "Your authenticated workspace is ready." in page_text(home)
+    assert "Welcome back, ADMIN." in page_text(home)
 
 
 def test_invalid_credentials_return_a_generic_error(app, client):
@@ -43,7 +43,7 @@ def test_invalid_credentials_return_a_generic_error(app, client):
     _establish_permanent_password(app, client, "ADMIN", PERMANENT)
     client.post("/logout", data=_logout_form(client), follow_redirects=False)
 
-    response = post_login(client, "ADMIN", "differenthorsebatter")
+    response = post_login(client, "ADMIN", "Cobalt!Harbor22-Maple")
 
     assert response.status_code == 200
     assert "Invalid username or password." in page_text(response)
@@ -55,8 +55,8 @@ def test_unknown_usernames_do_not_reveal_account_existence(app, client):
     _establish_permanent_password(app, client, "ADMIN", PERMANENT)
     client.post("/logout", data=_logout_form(client), follow_redirects=False)
 
-    unknown = post_login(client, "missinguser", "correcthorsebattery")
-    known = post_login(client, "ADMIN", "differenthorsebatter")
+    unknown = post_login(client, "missinguser", "Quartz!River1-Key")
+    known = post_login(client, "ADMIN", "Cobalt!Harbor22-Maple")
 
     assert unknown.status_code == known.status_code == 200
     assert "Invalid username or password." in page_text(unknown)
@@ -84,10 +84,10 @@ def test_unknown_and_known_accounts_perform_the_same_verification_work(
         from auth.login import authenticate
 
         calls["count"] = 0
-        assert authenticate(connection, "missinguser", "correcthorsebattery", utc_now()) is None
+        assert authenticate(connection, "missinguser", "Quartz!River1-Key", utc_now()) is None
         unknown_calls = calls["count"]
         calls["count"] = 0
-        assert authenticate(connection, "ADMIN", "correcthorsebattery", utc_now()) is None
+        assert authenticate(connection, "ADMIN", "Quartz!River1-Key", utc_now()) is None
         known_calls = calls["count"]
 
     assert unknown_calls == known_calls == 2
@@ -99,7 +99,7 @@ def test_login_throttling_prevents_excessive_attempts(app, client):
     client.post("/logout", data=_logout_form(client), follow_redirects=False)
 
     for _ in range(5):
-        failed = post_login(client, "reader02", "differenthorsebatter")
+        failed = post_login(client, "reader02", "Cobalt!Harbor22-Maple")
         assert "Invalid username or password." in page_text(failed)
 
     blocked = post_login(client, "reader02", PERMANENT)
@@ -146,7 +146,7 @@ def test_first_time_login_requires_password_setup(app, client):
     assert location_path(home) == "/password/change"
     assert setup.status_code == 200
     assert "Set a permanent password" in page_text(setup)
-    assert "Authenticated session established." not in page_text(setup)
+    assert "Your authenticated workspace is ready." not in page_text(setup)
     assert client.get("/health").status_code == 200
     assert client.get("/data/dossiers/DV-001.json").status_code == 404
 

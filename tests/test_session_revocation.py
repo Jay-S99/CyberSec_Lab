@@ -163,7 +163,7 @@ def test_password_change_invalidates_old_and_other_tokens(
                 connection, session_account.user_id, session_clock.now, "password"
             )
     response = submit_password_change(
-        client, "differenthorsebatter", current_password="correcthorsebattery"
+        client, "Cobalt!Harbor22-Maple", current_password="Quartz!River1-Key"
     )
     assert response.status_code == 303
     assert session_token(client) not in {session_account.token, other_token}
@@ -195,7 +195,7 @@ def test_stale_password_change_cannot_replace_credentials(
         "auth.login.validate_permanent_password", invalidate_after_policy_check
     )
     response = submit_password_change(
-        client, "differenthorsebatter", current_password="correcthorsebattery"
+        client, "Cobalt!Harbor22-Maple", current_password="Quartz!River1-Key"
     )
     assert response.status_code == 303
     assert location_path(response) == "/login"

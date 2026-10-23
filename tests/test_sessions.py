@@ -14,7 +14,7 @@ from tests.helpers import (
 )
 
 
-PERMANENT = "correcthorsebattery"
+PERMANENT = "Quartz!River1-Key"
 
 
 def test_session_identifiers_are_not_stored_in_plaintext(app, client):

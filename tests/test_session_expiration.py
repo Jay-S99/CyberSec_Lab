@@ -54,7 +54,7 @@ def test_expired_sessions_are_revoked_cleared_and_cannot_revive(
     client.set_cookie("doomvault_session", session_account.token)
     assert location_path(client.get("/password/change")) == "/login"
     assert session_token(client) is None
-    assert post_login(client, "agent01", "correcthorsebattery").status_code == 303
+    assert post_login(client, "agent01", "Quartz!River1-Key").status_code == 303
     assert session_token(client) != session_account.token
 
 

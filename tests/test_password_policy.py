@@ -135,13 +135,13 @@ def test_administrator_minimum_length_is_respected(app):
         connection.commit()
         rejected = validate_permanent_password(
             connection,
-            "correcthorsebattery",
-            confirmation="correcthorsebattery",
+            "Quartz!River1-Key",
+            confirmation="Quartz!River1-Key",
         )
         accepted = validate_permanent_password(
             connection,
-            "differenthorsebatter",
-            confirmation="differenthorsebatter",
+            "Cobalt!Harbor22-Maple",
+            confirmation="Cobalt!Harbor22-Maple",
         )
 
     assert rejected.accepted is False
@@ -154,8 +154,8 @@ def test_confirmation_mismatch_is_rejected(app):
     with app.app_context():
         result = validate_permanent_password(
             get_db(),
-            "correcthorsebattery",
-            confirmation="differenthorsebatter",
+            "Quartz!River1-Key",
+            confirmation="Cobalt!Harbor22-Maple",
         )
 
     assert "confirmation_mismatch" in _codes(result)
@@ -177,7 +177,7 @@ def test_password_history_prevents_reuse(app):
             WHERE id = ?
             """,
             (
-                hash_password("correcthorsebattery"),
+                hash_password("Quartz!River1-Key"),
                 "2026-01-01T00:00:00Z",
                 user_id,
             ),
@@ -189,46 +189,46 @@ def test_password_history_prevents_reuse(app):
             """,
             (
                 user_id,
-                hash_password("differenthorsebatter"),
+                hash_password("Cobalt!Harbor22-Maple"),
                 "2025-12-01T00:00:00Z",
             ),
         )
         connection.commit()
         current = validate_permanent_password(
             connection,
-            "correcthorsebattery",
+            "Quartz!River1-Key",
             user_id=user_id,
-            confirmation="correcthorsebattery",
+            confirmation="Quartz!River1-Key",
         )
         previous = validate_permanent_password(
             connection,
-            "differenthorsebatter",
+            "Cobalt!Harbor22-Maple",
             user_id=user_id,
-            confirmation="differenthorsebatter",
+            confirmation="Cobalt!Harbor22-Maple",
         )
         fresh = validate_permanent_password(
             connection,
-            "secondhorsebatteryx",
+            "Velvet!Comet3-Lock",
             user_id=user_id,
-            confirmation="secondhorsebatteryx",
+            confirmation="Velvet!Comet3-Lock",
         )
 
     assert "reused_password" in _codes(current)
     assert "reused_password" in _codes(previous)
     assert fresh.accepted is True
-    assert "correcthorsebattery" not in " ".join(current.messages())
+    assert "Quartz!River1-Key" not in " ".join(current.messages())
 
 
 def test_password_history_retains_the_configured_number_of_entries(app):
     prepare_database(app)
     passwords = (
-        "correcthorsebattery",
-        "differenthorsebatter",
-        "secondhorsebatteryx",
-        "thirdhorsebatteryxxx",
-        "fourthhorsebatteryxx",
-        "fifthhorsebatteryxxx",
-        "sixthhorsebatteryxxxx",
+        "Quartz!River1-Key",
+        "Cobalt!Harbor22-Maple",
+        "Velvet!Comet3-Lock",
+        "Silver!Prairie4-Gate",
+        "Indigo!Canyon5-Leaf",
+        "Copper!Meadow6-Fox",
+        "Marble!Lagoon7-Box",
     )
     with app.app_context():
         connection = get_db()
@@ -272,7 +272,7 @@ def test_password_history_retains_the_configured_number_of_entries(app):
 
     assert count == 5
     assert current_hash.startswith("$argon2id$")
-    assert "sixthhorsebatteryxxxx" not in current_hash
+    assert "Marble!Lagoon7-Box" not in current_hash
     assert oldest.accepted is True
 
 

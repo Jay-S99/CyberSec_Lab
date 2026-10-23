@@ -144,6 +144,14 @@ def finalize_response(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; base-uri 'none'; form-action 'self'; "
+        "frame-ancestors 'none'; object-src 'none'"
+    )
+    if current_app.config.get("ENVIRONMENT") == "production":
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     if g.get("suppress_session_cookie"):

@@ -38,7 +38,7 @@ def session_clock(monkeypatch):
 
 @pytest.fixture(scope="session")
 def session_password_hash():
-    return hash_password("correcthorsebattery")
+    return hash_password("Quartz!River1-Key")
 
 
 @pytest.fixture
