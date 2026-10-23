@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Sign in - DoomVault{% endblock %}
+{% block title %}{{ t('login.title') }} - DoomVault{% endblock %}
 {% block body_class %}auth-page{% endblock %}
 {% block content %}
 <section class="auth-terminal" aria-labelledby="login-title">
   <div class="auth-visual" aria-hidden="true">
     <div class="auth-emblem"><span>DV</span></div>
     <div class="radar-lines"></div>
-    <div class="auth-coordinates">NODE 07 // GATEWAY ACTIVE<br>ENCRYPTION LAYER // VERIFIED</div>
+    <div class="auth-coordinates">{{ t('login.node_status') }}<br>{{ t('login.encryption_status') }}</div>
   </div>
   <div class="auth-panel">
     <div class="auth-brand">
-      <span class="eyebrow">Strategic Intelligence Network</span>
+      <span class="eyebrow">{{ t('brand.network') }}</span>
       <h1>DOOM<span>VAULT</span></h1>
-      <p>Restricted access terminal</p>
+      <p>{{ t('login.restricted_terminal') }}</p>
     </div>
-    <div class="classification-strip"><span>Classified system</span><span>Authorized personnel only</span></div>
+    <div class="classification-strip"><span>{{ t('login.classified_system') }}</span><span>{{ t('login.authorized_only') }}</span></div>
     <div class="auth-heading">
-      <span class="section-number">01 / IDENTITY</span>
-      <h2 id="login-title">Identity verification</h2>
-      <p>Enter your assigned credentials to establish a secure session.</p>
+      <span class="section-number">{{ t('login.identity_section') }}</span>
+      <h2 id="login-title">{{ t('login.identity_heading') }}</h2>
+      <p>{{ t('login.identity_intro') }}</p>
     </div>
     {% if notice %}
       <p role="status">{{ notice }}</p>
@@ -32,20 +32,20 @@
     {% endif %}
     <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label for="username">Operator ID</label>
+      <label for="username">{{ t('login.operator_id') }}</label>
       <div class="field-frame">
         <span aria-hidden="true">ID</span>
-        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" placeholder="Enter username" required autofocus>
+        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" placeholder="{{ t('login.username_placeholder') }}" required autofocus>
       </div>
-      <label for="password">Access key</label>
+      <label for="password">{{ t('login.access_key') }}</label>
       <div class="field-frame">
         <span aria-hidden="true">••</span>
-        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" placeholder="Enter password" required>
+        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" placeholder="{{ t('login.password_placeholder') }}" required>
       </div>
-      <button class="button button-primary button-full" type="submit"><span>Authenticate</span><span aria-hidden="true">→</span></button>
+      <button class="button button-primary button-full" type="submit"><span>{{ t('login.authenticate') }}</span><span aria-hidden="true">→</span></button>
     </form>
-    <p class="auth-legal">Access is monitored and security events are recorded. Never share credentials.</p>
+    <p class="auth-legal">{{ t('login.security_notice') }}</p>
   </div>
 </section>
-<p class="fan-disclaimer">Unofficial educational fan project. Not affiliated with Marvel.</p>
+<p class="fan-disclaimer">{{ t('brand.fan_disclaimer') }}</p>
 {% endblock %}
