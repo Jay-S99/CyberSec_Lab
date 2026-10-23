@@ -1,8 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Archive - DoomVault{% endblock %}
+{% block title %}Command Center - DoomVault{% endblock %}
 {% block content %}
-<h1>DoomVault</h1>
-<p>Signed in as {{ username }}.</p>
 {% if notice %}
   <p role="status">{{ notice }}</p>
 {% endif %}
@@ -13,30 +11,56 @@
     {% endfor %}
   </div>
 {% endif %}
-<p>Authenticated session established.</p>
-<p><a href="{{ url_for('dossiers.index') }}">Browse authorized dossiers</a></p>
-{% if can_create_incident %}
-<p><a href="{{ url_for('incidents.create') }}">Submit incident report</a></p>
-<p><a href="{{ url_for('incidents.index') }}">View my incident reports</a></p>
-{% endif %}
-{% if can_review_incidents %}
-<p><a href="{{ url_for('incidents.review') }}">Review incident reports</a></p>
-{% endif %}
-{% if can_review_dossiers %}
-<p><a href="{{ url_for('dossiers.review') }}">Review pending dossiers</a></p>
-{% endif %}
-{% if can_create_dossier %}
-<p><a href="{{ url_for('dossiers.create') }}">Create dossier draft</a></p>
-{% endif %}
-{% if can_manage_users %}
-<p><a href="{{ url_for('admin.index') }}">Manage user accounts</a></p>
-{% endif %}
-{% if can_manage_security %}
-<p><a href="{{ url_for('admin.security') }}">Manage security settings</a></p>
-{% endif %}
-<p><a href="{{ url_for('auth.change_password') }}">Change password</a></p>
-<form method="post" action="{{ url_for('auth.logout') }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <button type="submit">Log out</button>
-</form>
+<header class="command-hero">
+  <div class="hero-copy">
+    <span class="eyebrow">Secure node // Warsaw sector</span>
+    <h1>COMMAND<br><span>CENTER</span></h1>
+    <p>Welcome back, <strong>{{ username }}</strong>. Your authenticated workspace is ready.</p>
+    <div class="hero-status-row">
+      <span><i></i>Session verified</span>
+      <span>{{ (current_role_name or 'authorized')|upper }} clearance</span>
+    </div>
+  </div>
+  <div class="hero-instrument" aria-hidden="true">
+    <div class="instrument-ring"><span>DV</span></div>
+    <div class="instrument-data"><span>NETWORK</span><strong>ONLINE</strong><small>SECURE CHANNEL ESTABLISHED</small></div>
+  </div>
+</header>
+
+<section class="dashboard-section" aria-labelledby="operations-heading">
+  <div class="section-heading">
+    <div><span class="section-number">01 / OPERATIONS</span><h2 id="operations-heading">Authorized workspaces</h2></div>
+    <p>Available modules reflect your current access profile.</p>
+  </div>
+  <div class="action-grid">
+    {% if can_browse_dossiers %}
+      <a class="action-card action-card-primary" href="{{ url_for('dossiers.index') }}"><span class="card-code">ARCHIVE // 001</span><h3>Intelligence archive</h3><p>Search and review dossiers available to your clearance.</p><span class="card-link">Open archive <b>→</b></span></a>
+    {% endif %}
+    {% if can_create_incident %}
+      <a class="action-card" href="{{ url_for('incidents.create') }}"><span class="card-code">INTAKE // 002</span><h3>Submit incident</h3><p>Transmit a private incident report to the editorial queue.</p><span class="card-link">New report <b>→</b></span></a>
+      <a class="action-card" href="{{ url_for('incidents.index') }}"><span class="card-code">HISTORY // 003</span><h3>My reports</h3><p>Review the status of your submitted incident reports.</p><span class="card-link">View reports <b>→</b></span></a>
+    {% endif %}
+    {% if can_review_incidents %}
+      <a class="action-card" href="{{ url_for('incidents.review') }}"><span class="card-code">QUEUE // 004</span><h3>Incident review</h3><p>Assess incoming reports and prepare intelligence drafts.</p><span class="card-link">Open queue <b>→</b></span></a>
+    {% endif %}
+    {% if can_review_dossiers %}
+      <a class="action-card" href="{{ url_for('dossiers.review') }}"><span class="card-code">REVIEW // 005</span><h3>Dossier approval</h3><p>Evaluate classified dossiers awaiting authorization.</p><span class="card-link">Review dossiers <b>→</b></span></a>
+    {% endif %}
+    {% if can_create_dossier %}
+      <a class="action-card" href="{{ url_for('dossiers.create') }}"><span class="card-code">EDITOR // 006</span><h3>Create dossier</h3><p>Open a controlled workspace for a new intelligence file.</p><span class="card-link">Create draft <b>→</b></span></a>
+    {% endif %}
+    {% if can_manage_users %}
+      <a class="action-card" href="{{ url_for('admin.index') }}"><span class="card-code">ADMIN // 007</span><h3>User command</h3><p>Manage operator identities, roles, and account states.</p><span class="card-link">Manage users <b>→</b></span></a>
+    {% endif %}
+    {% if can_manage_security %}
+      <a class="action-card" href="{{ url_for('admin.security') }}"><span class="card-code">POLICY // 008</span><h3>Security policy</h3><p>Configure password and session protection controls.</p><span class="card-link">Open controls <b>→</b></span></a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="clearance-panel">
+  <div><span class="section-number">02 / SECURITY CLEARANCE</span><h2>{{ (current_role_name or 'Authorized')|title }} access profile</h2></div>
+  <p>Navigation is filtered by permission. Every request is independently authorized by the server.</p>
+  <span class="clearance-seal">VERIFIED</span>
+</section>
 {% endblock %}
