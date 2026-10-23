@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}My incidents - DoomVault{% endblock %}
+{% block title %}{{ t('incidents.my_title') }} - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>My reports</span></nav>
+<nav class="breadcrumbs" aria-label="{{ t('common.breadcrumb') }}"><a href="{{ url_for('auth.home') }}">{{ t('common.command_center') }}</a><span>/</span><span>{{ t('incidents.my_reports') }}</span></nav>
 <header class="page-header">
-  <div><p class="eyebrow">Private reports // Operator history</p><h1>My incident <span>reports</span></h1><p>Private submissions associated with your authenticated identity.</p></div>
-  <a class="button button-primary" href="{{ url_for('incidents.create') }}">Submit report <span aria-hidden="true">＋</span></a>
+  <div><p class="eyebrow">{{ t('incidents.list_eyebrow') }}</p><h1>{{ t('incidents.list_heading_one') }} <span>{{ t('incidents.list_heading_two') }}</span></h1><p>{{ t('incidents.list_intro') }}</p></div>
+  <a class="button button-primary" href="{{ url_for('incidents.create') }}">{{ t('incidents.submit_report') }} <span aria-hidden="true">＋</span></a>
 </header>
 {% if incidents %}
-<div class="data-table-wrap" tabindex="0" role="region" aria-label="Your incident reports"><table class="data-table">
-  <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Created</th></tr></thead>
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="{{ t('incidents.your_reports') }}"><table class="data-table">
+  <thead><tr><th scope="col">{{ t('common.id') }}</th><th scope="col">{{ t('common.title') }}</th><th scope="col">{{ t('common.status') }}</th><th scope="col">{{ t('common.created') }}</th></tr></thead>
   <tbody>{% for incident in incidents %}<tr>
     <th class="record-id"><a href="{{ url_for('incidents.detail', incident_id=incident.id) }}">{{ display_identifier(incident.id) }}</a></th>
-    <td>{{ incident.title }}</td><td><span class="badge status-{{ incident.status|lower }}">{{ incident.status }}</span></td><td class="technical-text">{{ incident.created_at }}</td>
+    <td>{{ incident.title }}</td><td><span class="badge status-{{ incident.status|lower }}">{{ incident.status|status_label }}</span></td><td class="technical-text">{{ incident.created_at }}</td>
   </tr>{% endfor %}</tbody>
 </table></div>
-{% else %}<div class="empty-state"><span aria-hidden="true">Ø</span><h2>No reports found</h2><p>You have not submitted any incident reports.</p><a class="button button-primary" href="{{ url_for('incidents.create') }}">Submit an incident report</a></div>{% endif %}
+{% else %}<div class="empty-state"><span aria-hidden="true">Ø</span><h2>{{ t('incidents.none_heading') }}</h2><p>{{ t('incidents.none_text') }}</p><a class="button button-primary" href="{{ url_for('incidents.create') }}">{{ t('incidents.submit_full') }}</a></div>{% endif %}
 {% endblock %}
