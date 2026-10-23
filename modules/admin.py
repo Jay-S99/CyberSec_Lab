@@ -6,6 +6,7 @@ from werkzeug.exceptions import Forbidden, NotFound
 
 from auth.login import _render as render_secure_template
 from database import get_db
+from localization import translate_message
 from modules import security_settings, user_management
 from security.csrf import csrf_tokens_match
 from security.permissions import require_permission
@@ -172,7 +173,9 @@ def handle_security_settings_error(error):
 @bp.errorhandler(sqlite3.Error)
 def handle_database_error(_error):
     current_app.logger.error("Administration operation could not be completed.")
-    return "Administration is temporarily unavailable. Please try again.", 503
+    return translate_message(
+        "Administration is temporarily unavailable. Please try again."
+    ), 503
 
 
 @bp.get("")
