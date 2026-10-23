@@ -2,14 +2,15 @@
 {% block title %}Dossier registry - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<header class="dossier-header">
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><span>Intelligence archive</span></nav>
+<header class="page-header">
   <div>
-    <p class="dossier-kicker">DoomVault intelligence archive</p>
-    <h1>Dossier registry</h1>
+    <p class="eyebrow">Intelligence archive // Authorized records</p>
+    <h1>Dossier <span>registry</span></h1>
     <p>Only records authorized for your current clearance are shown.</p>
   </div>
   {% if can_create %}
-    <a class="dossier-button" href="{{ url_for('dossiers.create') }}">Create dossier</a>
+    <a class="button button-primary" href="{{ url_for('dossiers.create') }}">Create dossier <span aria-hidden="true">＋</span></a>
   {% endif %}
 </header>
 
@@ -21,8 +22,9 @@
   </div>
 {% endif %}
 
-<form class="dossier-filters" method="get" action="{{ url_for('dossiers.index') }}">
-  <label for="search">Search by ID or title
+<form class="filter-panel" method="get" action="{{ url_for('dossiers.index') }}">
+  <div class="filter-heading"><span class="section-number">FILTER PROTOCOL</span><strong>Refine archive query</strong></div>
+  <label class="filter-search" for="search">Search by ID or title
     <input id="search" name="search" type="search" maxlength="{{ search_max_length }}" value="{{ filters.search }}">
   </label>
   <label for="organization">Organization
@@ -49,15 +51,15 @@
       {% endfor %}
     </select>
   </label>
-  <div class="dossier-filter-actions">
-    <button type="submit">Apply</button>
-    <a href="{{ url_for('dossiers.index') }}">Clear</a>
+  <div class="filter-actions">
+    <button class="button button-primary" type="submit">Apply filters</button>
+    <a class="button button-ghost" href="{{ url_for('dossiers.index') }}">Clear</a>
   </div>
 </form>
 
 {% if dossiers %}
-  <div class="dossier-table-scroll">
-    <table class="dossier-table">
+  <div class="data-table-wrap" tabindex="0" role="region" aria-label="Authorized dossiers">
+    <table class="data-table">
       <caption>{{ dossiers|length }} authorized dossier{% if dossiers|length != 1 %}s{% endif %}</caption>
       <thead>
         <tr>
@@ -72,20 +74,18 @@
       <tbody>
       {% for dossier in dossiers %}
         <tr>
-          <th scope="row"><a href="{{ url_for('dossiers.detail', dossier_id=dossier.id) }}">{{ dossier.id }}</a></th>
+          <th class="record-id" scope="row"><a href="{{ url_for('dossiers.detail', dossier_id=dossier.id) }}">{{ dossier.id }}</a></th>
           <td>{{ dossier.title }}</td>
           <td>{{ dossier.organization }}</td>
-          <td><span class="dossier-badge dossier-classification">{{ dossier.classification }}</span></td>
-          <td><span class="dossier-badge">{{ dossier.status }}</span></td>
-          <td><time datetime="{{ dossier.updated_at }}">{{ dossier.updated_at }}</time></td>
+          <td><span class="badge badge-classification classification-{{ dossier.classification|lower|replace('_', '-') }}">{{ dossier.classification }}</span></td>
+          <td><span class="badge status-{{ dossier.status|lower }}">{{ dossier.status }}</span></td>
+          <td class="technical-text"><time datetime="{{ dossier.updated_at }}">{{ dossier.updated_at }}</time></td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 {% else %}
-  <p class="dossier-empty">No dossiers match your current clearance and filters.</p>
+  <div class="empty-state"><span aria-hidden="true">Ø</span><h2>No dossiers located</h2><p>No dossiers match your current clearance and filters.</p></div>
 {% endif %}
-
-<p><a href="{{ url_for('auth.home') }}">Return to DoomVault</a></p>
 {% endblock %}
