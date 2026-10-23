@@ -55,7 +55,7 @@ def test_login_discards_a_preset_identifier(
     other = app.test_client()
     preset = "A" * 43
     other.set_cookie("doomvault_session", preset)
-    response = post_login(other, "agent01", "correcthorsebattery")
+    response = post_login(other, "agent01", "Quartz!River1-Key")
     assert response.status_code == 303
     assert session_token(other) not in {None, preset, session_account.token}
     assert session_token(other) not in page_text(other.get("/"))
@@ -70,7 +70,7 @@ def test_login_rechecks_account_and_credentials_under_the_write_lock(
     with app.app_context():
         connection = get_db()
         result = authenticate(
-            connection, "agent01", "correcthorsebattery", session_clock.now
+            connection, "agent01", "Quartz!River1-Key", session_clock.now
         )
         assert result is not None
         with immediate_transaction(connection):
@@ -113,7 +113,7 @@ def test_privilege_context_change_requires_a_new_authentication(
         )
         connection.commit()
     assert location_path(client.get("/")) == "/login"
-    assert post_login(client, "agent01", "correcthorsebattery").status_code == 303
+    assert post_login(client, "agent01", "Quartz!River1-Key").status_code == 303
     assert session_token(client) != session_account.token
 
 
@@ -133,6 +133,19 @@ def test_public_health_is_available_even_with_a_stale_cookie(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.get_json() == {"status": "ok"}
+
+
+def test_security_headers_restrict_active_content_and_embedding(client):
+    response = client.get("/login")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert response.headers["Content-Security-Policy"] == (
+        "default-src 'self'; base-uri 'none'; form-action 'self'; "
+        "frame-ancestors 'none'; object-src 'none'"
+    )
+    assert "Strict-Transport-Security" not in response.headers
 
 
 @pytest.mark.parametrize(
@@ -175,6 +188,9 @@ def test_production_requires_secure_authentication_and_csrf_cookies(tmp_path):
         )
     response = application.test_client().get("/login")
     assert "Secure;" in response.headers["Set-Cookie"]
+    assert response.headers["Strict-Transport-Security"] == (
+        "max-age=31536000; includeSubDomains"
+    )
 
 
 def test_events_and_application_logs_contain_no_authentication_secrets(
@@ -182,7 +198,7 @@ def test_events_and_application_logs_contain_no_authentication_secrets(
 ):
     initial_token = session_account.token
     client.delete_cookie("doomvault_session")
-    post_login(client, "agent01", "correcthorsebattery")
+    post_login(client, "agent01", "Quartz!River1-Key")
     next_token = session_token(client)
     page = client.get("/")
     csrf_secret = client.get_cookie("doomvault_csrf").value
@@ -193,7 +209,7 @@ def test_events_and_application_logs_contain_no_authentication_secrets(
     event_types = {row["event_type"] for row in events}
     assert {"session_created", "session_expired"} <= event_types
     logged = str([dict(row) for row in events]) + caplog.text
-    for secret in (initial_token, next_token, csrf_secret, "correcthorsebattery"):
+    for secret in (initial_token, next_token, csrf_secret, "Quartz!River1-Key"):
         assert secret not in logged
     assert all(row["user_id"] == session_account.user_id for row in events)
     assert all(row["created_at"].endswith("Z") for row in events)
