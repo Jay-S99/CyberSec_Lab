@@ -2,13 +2,15 @@
 {% block title %}{{ dossier.id }} - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<header class="dossier-header">
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><a href="{{ url_for('dossiers.index') }}">Archive</a><span>/</span><span>{{ dossier.id }}</span></nav>
+<header class="case-file-header">
   <div>
-    <p class="dossier-kicker">Intelligence dossier {{ dossier.id }}</p>
+    <p class="eyebrow">Intelligence case file // {{ dossier.id }}</p>
     <h1>{{ dossier.title }}</h1>
+    <div class="case-badges"><span class="badge badge-classification classification-{{ dossier.classification|lower|replace('_', '-') }}">{{ dossier.classification }}</span><span class="badge status-{{ dossier.status|lower }}">{{ dossier.status }}</span></div>
   </div>
   {% if can_edit %}
-    <a class="dossier-button" href="{{ url_for('dossiers.edit', dossier_id=dossier.id) }}">Edit draft</a>
+    <a class="button button-primary" href="{{ url_for('dossiers.edit', dossier_id=dossier.id) }}">Edit draft <span aria-hidden="true">→</span></a>
   {% endif %}
 </header>
 
@@ -19,31 +21,31 @@
   </div>
 {% endif %}
 
-<dl class="dossier-metadata">
+<dl class="metadata-grid">
   <div><dt>Organization</dt><dd>{{ dossier.organization }}</dd></div>
-  <div><dt>Classification</dt><dd><span class="dossier-badge dossier-classification">{{ dossier.classification }}</span></dd></div>
-  <div><dt>Status</dt><dd><span class="dossier-badge">{{ dossier.status }}</span></dd></div>
+  <div><dt>Classification</dt><dd>{{ dossier.classification }}</dd></div>
+  <div><dt>Lifecycle status</dt><dd>{{ dossier.status }}</dd></div>
   {% if dossier.incident.location %}<div><dt>Location</dt><dd>{{ dossier.incident.location }}</dd></div>{% endif %}
   {% if dossier.incident.threat_level %}<div><dt>Threat level</dt><dd>{{ dossier.incident.threat_level }}</dd></div>{% endif %}
 </dl>
 
 {% if rejection_reason %}
-  <section class="dossier-section">
-    <h2>Rejection reason</h2>
+  <section class="content-panel warning-panel">
+    <div class="panel-heading"><span>REVIEW NOTE</span><h2>Rejection reason</h2></div>
     <p>{{ rejection_reason }}</p>
   </section>
 {% endif %}
 
 {% if dossier.incident.summary %}
-  <section class="dossier-section">
-    <h2>Summary</h2>
+  <section class="content-panel">
+    <div class="panel-heading"><span>01</span><h2>Summary</h2></div>
     <p>{{ dossier.incident.summary }}</p>
   </section>
 {% endif %}
 
 {% if dossier.incident.observations %}
-  <section class="dossier-section">
-    <h2>Observations</h2>
+  <section class="content-panel">
+    <div class="panel-heading"><span>02</span><h2>Observations</h2></div>
     <ul>
     {% for observation in dossier.incident.observations %}
       <li>{{ observation }}</li>
@@ -53,49 +55,49 @@
 {% endif %}
 
 {% if dossier.incident.conclusion %}
-  <section class="dossier-section">
-    <h2>Conclusion</h2>
+  <section class="content-panel">
+    <div class="panel-heading"><span>03</span><h2>Conclusion</h2></div>
     <p>{{ dossier.incident.conclusion }}</p>
   </section>
 {% endif %}
 
 {% if can_submit %}
-  <form method="post" action="{{ url_for('dossiers.submit', dossier_id=dossier.id) }}">
+  <form class="workflow-action" method="post" action="{{ url_for('dossiers.submit', dossier_id=dossier.id) }}" data-confirm="Submit this dossier for manager approval?">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">Submit for approval</button>
+    <button class="button button-primary" type="submit">Submit for approval</button>
   </form>
 {% endif %}
 
 {% if can_review %}
-  <section class="dossier-section">
-    <h2>Manager review</h2>
-    <form method="post" action="{{ url_for('dossiers.approve', dossier_id=dossier.id) }}">
+  <section class="content-panel review-panel">
+    <div class="panel-heading"><span>AUTH</span><h2>Manager review</h2></div>
+    <form class="workflow-action" method="post" action="{{ url_for('dossiers.approve', dossier_id=dossier.id) }}" data-confirm="Approve this dossier for the next lifecycle stage?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button type="submit">Approve dossier</button>
+      <button class="button button-success" type="submit">Approve dossier</button>
     </form>
-    <form method="post" action="{{ url_for('dossiers.reject', dossier_id=dossier.id) }}">
+    <form class="review-reject" method="post" action="{{ url_for('dossiers.reject', dossier_id=dossier.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label for="reason">Rejection reason
         <textarea id="reason" name="reason" maxlength="{{ rejection_reason_max_length }}" required></textarea>
       </label>
-      <button type="submit">Reject dossier</button>
+      <button class="button button-danger" type="submit">Reject dossier</button>
     </form>
   </section>
 {% endif %}
 
 {% if can_declassify %}
-  <section class="dossier-section">
-    <h2>Controlled declassification</h2>
-    <form method="post" action="{{ url_for('dossiers.declassify', dossier_id=dossier.id) }}">
+  <section class="content-panel warning-panel">
+    <div class="panel-heading"><span>FINAL</span><h2>Controlled declassification</h2></div>
+    <form method="post" action="{{ url_for('dossiers.declassify', dossier_id=dossier.id) }}" data-confirm="Confirm controlled declassification of this approved dossier?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label>
         <input type="checkbox" name="confirm" value="yes" required>
         I confirm this approved dossier may be declassified.
       </label>
-      <button type="submit">Declassify dossier</button>
+      <button class="button button-warning" type="submit">Declassify dossier</button>
     </form>
   </section>
 {% endif %}
 
-<p><a href="{{ url_for('dossiers.index') }}">Return to dossier registry</a></p>
+<p class="back-link"><a href="{{ url_for('dossiers.index') }}">← Return to dossier registry</a></p>
 {% endblock %}
