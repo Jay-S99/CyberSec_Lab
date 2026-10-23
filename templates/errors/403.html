@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Access Denied - DoomVault{% endblock %}
+{% block title %}{{ t('errors.access_denied_title') }} - DoomVault{% endblock %}
 {% block body_class %}access-denied{% endblock %}
 {% block application_shell %}false{% endblock %}
 {% block content %}
 <section class="denied-panel">
   <div class="denied-code" aria-hidden="true">403</div>
   <div class="denied-mark" aria-hidden="true"><span>×</span></div>
-  <p class="eyebrow">Security response // Request terminated</p>
-  <h1>ACCESS DENIED</h1>
-  <h2>Insufficient Security Clearance</h2>
-  <p>Your current clearance does not permit access to this DoomVault resource.</p>
-  <a class="button button-primary" href="{{ url_for('auth.home') }}">Return to DoomVault</a>
+  <p class="eyebrow">{{ t('errors.security_response') }}</p>
+  <h1>{{ t('errors.access_denied') }}</h1>
+  <h2>{{ t('errors.insufficient_clearance') }}</h2>
+  <p>{{ t('errors.access_denied_text') }}</p>
+  <a class="button button-primary" href="{{ url_for('auth.home') }}">{{ t('errors.return') }}</a>
 </section>
 {% endblock %}

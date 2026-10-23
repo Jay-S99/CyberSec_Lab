@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ t('errors.not_found_title') }} - DoomVault{% endblock %}
+{% block body_class %}access-denied{% endblock %}
+{% block application_shell %}false{% endblock %}
+{% block content %}
+<section class="denied-panel">
+  <div class="denied-code" aria-hidden="true">404</div>
+  <div class="denied-mark" aria-hidden="true"><span>?</span></div>
+  <p class="eyebrow">{{ t('errors.not_found_response') }}</p>
+  <h1>{{ t('errors.not_found') }}</h1>
+  <h2>{{ t('errors.not_found_heading') }}</h2>
+  <p>{{ t('errors.not_found_text') }}</p>
+  <a class="button button-primary" href="{{ url_for('auth.home') }}">{{ t('errors.return') }}</a>
+</section>
+{% endblock %}

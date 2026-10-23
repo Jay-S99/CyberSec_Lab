@@ -15,6 +15,7 @@ from flask import (
 from auth.login import _render as render_secure_template
 from auth.login import require_login
 from database import get_db, immediate_transaction, utc_now
+from localization import translate_message
 from modules import dossier_management, dossier_workflow
 from security.csrf import csrf_tokens_match
 from security.permissions import (
@@ -75,7 +76,9 @@ def index():
         )
     except dossier_management.DossierError as error:
         if wants_json_response():
-            return jsonify(error="invalid_filters", message=str(error)), 400
+            return jsonify(
+                error="invalid_filters", message=translate_message(str(error))
+            ), 400
         return _render_index((), _safe_filter_values(), (str(error),), 400)
     if wants_json_response():
         return jsonify(dossiers=visible)
@@ -415,6 +418,7 @@ def _perform_transition(
 
 
 def _workflow_error(message, status):
+    message = translate_message(message)
     if wants_json_response():
         return jsonify(error="workflow_transition_failed", message=message), status
     return message, status, {"Content-Type": "text/plain; charset=utf-8"}

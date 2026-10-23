@@ -1,34 +1,34 @@
 {% extends "admin/base.html" %}
-{% block title %}Forbidden words - DoomVault{% endblock %}
+{% block title %}{{ t('admin.dictionary_title') }} - DoomVault{% endblock %}
 {% block admin_content %}
 <div class="admin-heading">
   <div>
-    <p class="eyebrow">Security policy // Restricted dictionary</p>
-    <h1>Forbidden <span>words</span></h1>
-    <p>Manage organization-specific terms rejected in future permanent passwords while the policy is enabled.</p>
+    <p class="eyebrow">{{ t('admin.dictionary_eyebrow') }}</p>
+    <h1>{{ t('admin.dictionary_heading_one') }} <span>{{ t('admin.dictionary_heading_two') }}</span></h1>
+    <p>{{ t('admin.dictionary_intro') }}</p>
   </div>
-  <a class="button button-ghost" href="{{ url_for('admin.security') }}">Back to security settings</a>
+  <a class="button button-ghost" href="{{ url_for('admin.security') }}">{{ t('admin.back_security') }}</a>
 </div>
 
 <section class="admin-policy-card admin-add-word" aria-labelledby="add-word-heading">
-  <h2 id="add-word-heading">Add a word</h2>
+  <h2 id="add-word-heading">{{ t('admin.add_word') }}</h2>
   <form method="post" action="{{ url_for('admin.forbidden_words') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label for="new-forbidden-word">Word or token</label>
+    <label for="new-forbidden-word">{{ t('admin.word_or_token') }}</label>
     <input id="new-forbidden-word" name="word" type="text" maxlength="{{ maximum_word_length }}" value="{{ new_word }}" required>
-    <p class="admin-muted">Entries are trimmed and matched case-insensitively. Unicode-equivalent and accented/unaccented Polish forms are treated consistently.</p>
-    <button class="button button-primary" type="submit">Add forbidden word</button>
+    <p class="admin-muted">{{ t('admin.word_help') }}</p>
+    <button class="button button-primary" type="submit">{{ t('admin.add_forbidden_word') }}</button>
   </form>
 </section>
 
-<div class="data-table-wrap" tabindex="0" role="region" aria-label="Forbidden-word dictionary">
+<div class="data-table-wrap" tabindex="0" role="region" aria-label="{{ t('admin.dictionary_region') }}">
   <table class="data-table admin-table admin-words-table">
-    <caption>{{ words|length }} forbidden {{ "entry" if words|length == 1 else "entries" }}. Changes apply to subsequent password validation.</caption>
+    <caption>{{ t('admin.dictionary_count', count=words|length) }}</caption>
     <thead>
       <tr>
-        <th scope="col">Entry</th>
-        <th scope="col">Created</th>
-        <th scope="col">Actions</th>
+        <th scope="col">{{ t('admin.entry') }}</th>
+        <th scope="col">{{ t('common.created') }}</th>
+        <th scope="col">{{ t('common.actions') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -37,29 +37,29 @@
           <th scope="row">
             <form class="admin-inline-edit" method="post" action="{{ url_for('admin.edit_forbidden_word', word_id=entry.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <label class="admin-visually-hidden" for="word-{{ entry.id }}">Edit {{ entry.word }}</label>
+              <label class="admin-visually-hidden" for="word-{{ entry.id }}">{{ t('admin.edit_word', word=entry.word) }}</label>
               <input id="word-{{ entry.id }}" name="word" type="text" maxlength="{{ maximum_word_length }}" value="{{ entry.word }}" required>
-              <button class="admin-secondary" type="submit">Save</button>
+              <button class="admin-secondary" type="submit">{{ t('common.save') }}</button>
             </form>
           </th>
           <td class="admin-date">{{ entry.created_at }}</td>
           <td>
             <details class="admin-delete">
-              <summary>Delete entry</summary>
+              <summary>{{ t('admin.delete_entry') }}</summary>
               <form method="post" action="{{ url_for('admin.delete_forbidden_word', word_id=entry.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <p>This removes the term from future password checks.</p>
+                <p>{{ t('admin.delete_word_warning') }}</p>
                 <label class="admin-check" for="confirm-delete-word-{{ entry.id }}">
                   <input id="confirm-delete-word-{{ entry.id }}" name="confirm_delete" type="checkbox" value="yes" required>
-                  <span>I confirm deletion of {{ entry.word }}.</span>
+                  <span>{{ t('admin.confirm_word_deletion', word=entry.word) }}</span>
                 </label>
-                <button class="button button-danger" type="submit">Delete</button>
+                <button class="button button-danger" type="submit">{{ t('common.delete') }}</button>
               </form>
             </details>
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="3">The dictionary is empty. Add an entry above.</td></tr>
+        <tr><td colspan="3">{{ t('admin.dictionary_empty') }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
