@@ -14,6 +14,7 @@ from flask import (
 from auth.login import _render as render_secure_template
 from auth.login import require_login
 from database import get_db, immediate_transaction, utc_now
+from localization import translate_message
 from modules import dossier_management, incident_management
 from security.csrf import csrf_tokens_match
 from security.permissions import (
@@ -195,6 +196,7 @@ def _render_create(values, errors=(), status=200):
 
 
 def _conversion_error(incident, message, status):
+    message = translate_message(message)
     if wants_json_response():
         return jsonify(error="incident_conversion_failed", message=message), status
     return render_secure_template(
