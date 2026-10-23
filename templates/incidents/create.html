@@ -2,27 +2,27 @@
 {% block title %}Submit incident - DoomVault{% endblock %}
 {% block body_class %}dossier-page{% endblock %}
 {% block content %}
-<header class="dossier-header">
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{{ url_for('auth.home') }}">Command center</a><span>/</span><a href="{{ url_for('incidents.index') }}">My reports</a><span>/</span><span>New report</span></nav>
+<header class="page-header">
   <div>
-    <p class="dossier-kicker">Private employee report</p>
-    <h1>Submit incident report</h1>
+    <p class="eyebrow">Private employee report // Secure intake</p>
+    <h1>Submit incident <span>report</span></h1>
     <p>Your identity and the initial NEW status are assigned by the server.</p>
   </div>
 </header>
-
 {% if errors %}<div role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
-
-<form class="dossier-form" method="post" action="{{ url_for('incidents.create') }}">
+<form class="form-panel" method="post" action="{{ url_for('incidents.create') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-section-label"><span>01</span><strong>Incident details</strong></div>
   <label for="title">Title
     <input id="title" name="title" maxlength="{{ limits.TITLE_MAX_LENGTH }}" required value="{{ values.title }}">
   </label>
   <label for="description">Description
     <textarea id="description" name="description" maxlength="{{ limits.DESCRIPTION_MAX_LENGTH }}" rows="10" required>{{ values.description }}</textarea>
   </label>
-  <div class="dossier-form-actions">
-    <button type="submit">Submit report</button>
-    <a href="{{ url_for('auth.home') }}">Cancel</a>
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">Submit report</button>
+    <a class="button button-ghost" href="{{ url_for('auth.home') }}">Cancel</a>
   </div>
 </form>
 {% endblock %}
