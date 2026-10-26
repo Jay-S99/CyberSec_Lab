@@ -9,6 +9,10 @@ approval workflows.
 The interface uses an original Marvel-inspired visual theme for an unofficial
 educational fan project. DoomVault is not affiliated with Marvel or Disney.
 
+**Project documentation:** [Architecture](docs/architecture.md) ·
+[Academic report (Markdown)](docs/project_report.md) ·
+[Academic report (PDF)](docs/DoomVault_Project_Report.pdf)
+
 ## Screenshots
 
 ### Secure Authentication Terminal
@@ -180,12 +184,15 @@ instance/               Ignored local runtime data
 ```
 
 Additional design and verification details are available in the documentation
-for [authentication](docs/authentication.md),
+for [architecture](docs/architecture.md),
+[authentication](docs/authentication.md),
 [sessions](docs/session_management.md), [authorization](docs/authorization.md),
 [RBAC](docs/rbac.md), [user management](docs/user_management.md),
 [security policies](docs/security_policies.md),
 [dossier management](docs/dossier_management.md), and
-[dossier workflows](docs/dossier_workflow.md).
+[dossier workflows](docs/dossier_workflow.md). The complete academic report is
+available as editable [Markdown](docs/project_report.md) and as a submission-ready
+[PDF](docs/DoomVault_Project_Report.pdf).
 
 ## Disclaimer
 
