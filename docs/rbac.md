@@ -68,8 +68,8 @@ Every seeded account is inactive, has `password_hash` set to null, has `must_cha
 
 ## Permission purposes
 
-- `users.manage`: enter the user administration area; future account and role operations.
-- `security.manage`: future security settings operations; reusable decorator available, with no settings interface in Task2.2.
+- `users.manage`: enter the user administration area and perform implemented account lifecycle and role operations.
+- `security.manage`: configure implemented password, forbidden-word, validity, history, and session-timeout policies.
 - `dossiers.read_declassified`: read dossiers with both classification and status `DECLASSIFIED`.
 - `dossiers.read_classified`: read `INTERNAL`, `SECRET`, and `TOP_SECRET` dossiers in `PENDING`, legacy `SUBMITTED`, or `APPROVED` states.
 - `dossiers.read_doom_level`: an additional gate for DOOM_LEVEL content; also requires classified reading and a permitted review state.
