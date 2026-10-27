@@ -60,7 +60,7 @@
           <td>
             <div class="admin-row-actions">
               <a class="table-action" href="{{ url_for('admin.edit_user', user_id=user.id) }}">{{ t('common.edit') }}</a>
-              <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}">
+              <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}" target="_blank" rel="noopener">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button class="admin-secondary" type="submit">{% if user.account_status == 'pending' %}{{ t('admin.generate_credential') }}{% else %}{{ t('admin.reset_password') }}{% endif %}</button>
               </form>
