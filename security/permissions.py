@@ -12,6 +12,14 @@ PERMISSION_NAMES = frozenset(name for name, _description in PERMISSIONS)
 ROLE_NAMES = frozenset(name for name, _description in ROLES)
 WORKING_STATUSES = frozenset({"DRAFT", "REJECTED"})
 REVIEW_STATUSES = frozenset({"PENDING", "SUBMITTED", "APPROVED"})
+DOSSIER_BROWSE_PERMISSIONS = frozenset(
+    {
+        "dossiers.read_declassified",
+        "dossiers.read_classified",
+        "dossiers.read_doom_level",
+        "dossiers.read_own_drafts",
+    }
+)
 
 
 def _field(record, name):
@@ -91,6 +99,10 @@ def has_permission(permission):
         and permission in PERMISSION_NAMES
         and permission in get_user_permissions()
     )
+
+
+def can_browse_dossiers():
+    return bool(DOSSIER_BROWSE_PERMISSIONS & get_user_permissions())
 
 
 def deny_access(operation):

@@ -20,6 +20,7 @@ from modules import dossier_management, dossier_workflow
 from security.csrf import csrf_tokens_match
 from security.permissions import (
     can_access_dossier,
+    can_browse_dossiers,
     can_declassify_dossier,
     can_edit_dossier,
     can_review_dossier,
@@ -69,6 +70,8 @@ def load_dossier_document(dossier):
 @bp.get("")
 @require_login
 def index():
+    if not can_browse_dossiers():
+        deny_access("dossiers.read")
     try:
         filters = _request_filters()
         visible, filters = dossier_management.list_dossiers(
