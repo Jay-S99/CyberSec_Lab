@@ -172,7 +172,7 @@ def finalize_response(response):
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
-    if g.user is not None:
+    if request.method == "GET" and g.user is not None:
         if g.password_change_required:
             return redirect(url_for("auth.change_password"))
         return redirect(url_for("auth.home"))
@@ -319,7 +319,9 @@ class LoginSuccess:
         self.replacement_hash = replacement_hash
 
 
-def open_authenticated_session(connection, result, now):
+def open_authenticated_session(
+    connection, result, now, *, previous_session_id=None
+):
     with immediate_transaction(connection):
         now = utc_now()
         current_user = _user_by_id(connection, result.user["id"])
@@ -367,6 +369,8 @@ def open_authenticated_session(connection, result, now):
                     result.verified_hash,
                 ),
             )
+        if previous_session_id is not None:
+            revoke_session(connection, previous_session_id, now)
         _session_id, token, max_age = create_session(
             connection,
             result.user["id"],
@@ -393,7 +397,15 @@ def _submit_login():
                 "login.html",
                 errors=(translate("invalid_credentials"),),
             )
-        token, max_age = open_authenticated_session(connection, result, now)
+        previous_session_id = (
+            g.auth_session["id"] if g.auth_session is not None else None
+        )
+        token, max_age = open_authenticated_session(
+            connection,
+            result,
+            now,
+            previous_session_id=previous_session_id,
+        )
     except CredentialRejected:
         return _render(
             "login.html",
