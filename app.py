@@ -32,7 +32,7 @@ def create_app(config_class=Config):
 
     @application.context_processor
     def administration_navigation():
-        from security.permissions import has_permission
+        from security.permissions import can_browse_dossiers, has_permission
 
         role_name = None
         if g.get("user") is not None:
@@ -41,17 +41,9 @@ def create_app(config_class=Config):
             ).fetchone()
             role_name = role["name"] if role is not None else None
 
-        dossier_permissions = (
-            "dossiers.read_declassified",
-            "dossiers.read_classified",
-            "dossiers.read_doom_level",
-            "dossiers.read_own_drafts",
-        )
         return {
             "current_role_name": role_name,
-            "can_browse_dossiers": any(
-                has_permission(permission) for permission in dossier_permissions
-            ),
+            "can_browse_dossiers": can_browse_dossiers(),
             "can_manage_users": has_permission("users.manage"),
             "can_manage_security": has_permission("security.manage"),
             "can_create_dossier": has_permission("dossiers.create"),

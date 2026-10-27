@@ -2,7 +2,7 @@
 {% block title %}{{ t('admin.create_user') }} - DoomVault{% endblock %}
 {% block admin_content %}
 <div class="page-header"><div><p class="eyebrow">{{ t('admin.new_operator_eyebrow') }}</p><h1>{{ t('admin.create_heading_one') }} <span>{{ t('admin.create_heading_two') }}</span></h1><p>{{ t('admin.create_intro') }}</p></div></div>
-<form class="form-panel admin-account-form" method="post" action="{{ url_for('admin.create_user') }}">
+<form class="form-panel admin-account-form" method="post" action="{{ url_for('admin.create_user') }}" data-credential-provision-form>
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="form-section-label"><span>01</span><strong>{{ t('admin.operator_profile') }}</strong></div>
   {% include "admin/_user_fields.html" %}
