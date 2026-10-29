@@ -67,6 +67,43 @@
   </section>
 </div>
 
+<div class="admin-heading">
+  <div>
+    <p class="eyebrow">{{ t('admin.login_protection_eyebrow') }}</p>
+    <h2>{{ t('admin.login_protection') }}</h2>
+    <p>{{ t('admin.login_protection_intro', minutes=settings.login_lockout_minutes) }}</p>
+    <p class="admin-muted">{{ t('admin.fixed_lockout_duration', minutes=settings.login_lockout_minutes) }}</p>
+  </div>
+</div>
+
+<div class="admin-policy-grid">
+  <section class="admin-policy-card" aria-labelledby="login-failure-limit-heading">
+    <div class="policy-icon" aria-hidden="true">05</div><h2 id="login-failure-limit-heading">{{ t('admin.account_login_limit') }}</h2>
+    <p>{{ t('admin.account_login_limit_intro') }}</p>
+    <form method="post" action="{{ url_for('admin.update_login_failure_limit') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="login-max-failed-attempts">{{ t('admin.failed_attempts') }}</label>
+      <input id="login-max-failed-attempts" name="login_max_failed_attempts" type="number" min="{{ minimum_login_failure_limit }}" max="{{ maximum_login_failure_limit }}" step="1" value="{{ settings.login_max_failed_attempts }}" required>
+      {% if field_errors.login_max_failed_attempts %}<p class="admin-field-error">{{ field_errors.login_max_failed_attempts }}</p>{% endif %}
+      <p class="admin-muted">{{ t('admin.account_login_limit_help', minimum=minimum_login_failure_limit, maximum=maximum_login_failure_limit, minutes=settings.login_lockout_minutes) }}</p>
+      <button class="button button-primary" type="submit">{{ t('admin.save_login_limit') }}</button>
+    </form>
+  </section>
+
+  <section class="admin-policy-card" aria-labelledby="ip-login-failure-limit-heading">
+    <div class="policy-icon" aria-hidden="true">06</div><h2 id="ip-login-failure-limit-heading">{{ t('admin.ip_login_limit') }}</h2>
+    <p>{{ t('admin.ip_login_limit_intro') }}</p>
+    <form method="post" action="{{ url_for('admin.update_ip_login_failure_limit') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="login-ip-max-failed-attempts">{{ t('admin.failed_attempts_per_ip') }}</label>
+      <input id="login-ip-max-failed-attempts" name="login_ip_max_failed_attempts" type="number" min="{{ minimum_ip_login_failure_limit }}" max="{{ maximum_ip_login_failure_limit }}" step="1" value="{{ settings.login_ip_max_failed_attempts }}" required>
+      {% if field_errors.login_ip_max_failed_attempts %}<p class="admin-field-error">{{ field_errors.login_ip_max_failed_attempts }}</p>{% endif %}
+      <p class="admin-muted">{{ t('admin.ip_login_limit_help', minimum=minimum_ip_login_failure_limit, maximum=maximum_ip_login_failure_limit, minutes=settings.login_lockout_minutes) }}</p>
+      <button class="button button-primary" type="submit">{{ t('admin.save_ip_login_limit') }}</button>
+    </form>
+  </section>
+</div>
+
 <section class="admin-readonly" aria-labelledby="temporary-password-heading">
   <div class="panel-heading"><span>{{ t('admin.locked') }}</span><h2 id="temporary-password-heading">{{ t('admin.temporary_credentials') }}</h2></div>
   <p>{{ t('admin.temporary_credentials_help', hours=settings.temporary_password_validity_hours) }}</p>

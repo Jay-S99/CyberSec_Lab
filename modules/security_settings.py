@@ -15,6 +15,15 @@ from auth.password_policy import (
     session_timeout_minutes,
     temporary_password_hours,
 )
+from auth.login_protection import (
+    LOCKOUT_MINUTES,
+    MAXIMUM_ACCOUNT_FAILURE_LIMIT,
+    MAXIMUM_IP_FAILURE_LIMIT,
+    MINIMUM_ACCOUNT_FAILURE_LIMIT,
+    MINIMUM_IP_FAILURE_LIMIT,
+    account_failure_limit,
+    ip_failure_limit,
+)
 from auth.sessions import validate_session
 from database import format_utc, immediate_transaction, utc_now
 from security.permissions import get_role_permissions
@@ -38,6 +47,9 @@ def current_settings(connection):
         "password_validity_days": password_validity_days(connection),
         "session_inactivity_timeout_minutes": session_timeout_minutes(connection),
         "temporary_password_validity_hours": temporary_password_hours(connection),
+        "login_max_failed_attempts": account_failure_limit(connection),
+        "login_ip_max_failed_attempts": ip_failure_limit(connection),
+        "login_lockout_minutes": LOCKOUT_MINUTES,
     }
 
 
@@ -183,6 +195,59 @@ def set_session_timeout_minutes(
             str(value),
             "session_timeout_changed",
             f"Session inactivity timeout changed; minutes={value}.",
+            now,
+        )
+
+
+def set_login_failure_limit(
+    connection, actor_id, session_token, submitted_value
+):
+    value = _validated_integer(
+        submitted_value,
+        minimum=MINIMUM_ACCOUNT_FAILURE_LIMIT,
+        maximum=MAXIMUM_ACCOUNT_FAILURE_LIMIT,
+        field="login_max_failed_attempts",
+        message=(
+            "Login failure limit must be a whole number from "
+            f"{MINIMUM_ACCOUNT_FAILURE_LIMIT} to "
+            f"{MAXIMUM_ACCOUNT_FAILURE_LIMIT}."
+        ),
+    )
+    with _security_transaction(connection, actor_id, session_token) as now:
+        return _store_setting(
+            connection,
+            actor_id,
+            "login_max_failed_attempts",
+            str(value),
+            "security_setting_changed",
+            f"Security setting changed; setting=login_max_failed_attempts; "
+            f"value={value}.",
+            now,
+        )
+
+
+def set_ip_login_failure_limit(
+    connection, actor_id, session_token, submitted_value
+):
+    value = _validated_integer(
+        submitted_value,
+        minimum=MINIMUM_IP_FAILURE_LIMIT,
+        maximum=MAXIMUM_IP_FAILURE_LIMIT,
+        field="login_ip_max_failed_attempts",
+        message=(
+            "IP login failure limit must be a whole number from "
+            f"{MINIMUM_IP_FAILURE_LIMIT} to {MAXIMUM_IP_FAILURE_LIMIT}."
+        ),
+    )
+    with _security_transaction(connection, actor_id, session_token) as now:
+        return _store_setting(
+            connection,
+            actor_id,
+            "login_ip_max_failed_attempts",
+            str(value),
+            "security_setting_changed",
+            "Security setting changed; setting=login_ip_max_failed_attempts; "
+            f"value={value}.",
             now,
         )
 

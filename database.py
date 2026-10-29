@@ -18,6 +18,7 @@ REQUIRED_TABLES = (
     "sessions",
     "forbidden_words",
     "settings",
+    "login_throttles",
     "dossiers",
     "incident_reports",
     "security_events",
@@ -98,7 +99,32 @@ def _column_names(connection, table_name):
 
 def apply_schema_updates(connection):
     """Add nullable lifecycle columns to older databases without losing rows."""
-    changed = False
+    changed = not _table_exists(connection, "login_throttles")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS login_throttles (
+            scope TEXT NOT NULL CHECK (scope IN ('account', 'ip')),
+            subject_hash TEXT NOT NULL CHECK (length(subject_hash) = 64),
+            failure_count INTEGER NOT NULL CHECK (failure_count > 0),
+            window_started_at TEXT NOT NULL,
+            last_failure_at TEXT NOT NULL,
+            locked_until TEXT,
+            PRIMARY KEY (scope, subject_hash)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_login_throttles_last_failure
+        ON login_throttles (last_failure_at)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_login_throttles_locked_until
+        ON login_throttles (locked_until)
+        """
+    )
     if _table_exists(connection, "users"):
         user_columns = _column_names(connection, "users")
         if "is_blocked" not in user_columns:

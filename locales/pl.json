@@ -316,6 +316,20 @@
   "admin.locked": "ZABLOKOWANE",
   "admin.temporary_credentials": "Tymczasowe dane logowania",
   "admin.temporary_credentials_help": "Maksymalny okres ważności: {hours} godzin. Ten limit bezpieczeństwa jest tylko do odczytu. Tymczasowe dane nadal wymagają stałego hasła przy pierwszym logowaniu.",
+  "admin.login_protection_eyebrow": "Bezpieczeństwo uwierzytelniania // Obrona automatyczna",
+  "admin.login_protection": "Ochrona logowania",
+  "admin.login_protection_intro": "Ogranicz nieudane próby uwierzytelniania. Blokady konta i adresu IP trwają zawsze {minutes} minut.",
+  "admin.fixed_lockout_duration": "Czas blokady konta: {minutes} minut (tylko do odczytu).",
+  "admin.account_login_limit": "Limit prób dla konta",
+  "admin.account_login_limit_intro": "Tymczasowo blokuj podaną tożsamość konta po serii niepowodzeń w ciągu 15 minut.",
+  "admin.failed_attempts": "Maksymalna liczba nieudanych prób",
+  "admin.account_login_limit_help": "Liczba całkowita od {minimum} do {maximum}. Czas blokady wynosi zawsze {minutes} minut.",
+  "admin.save_login_limit": "Zapisz limit konta",
+  "admin.ip_login_limit": "Limit prób dla adresu IP",
+  "admin.ip_login_limit_intro": "Ogranicz niepowodzenia dla różnych nazw użytkownika pochodzące z tego samego bezpośredniego adresu źródłowego.",
+  "admin.failed_attempts_per_ip": "Maksymalna liczba nieudanych prób na IP",
+  "admin.ip_login_limit_help": "Liczba całkowita od {minimum} do {maximum}. Okres wyciszenia wynosi zawsze {minutes} minut.",
+  "admin.save_ip_login_limit": "Zapisz limit IP",
   "admin.dictionary_title": "Zabronione słowa",
   "admin.dictionary_eyebrow": "Polityka bezpieczeństwa // Słownik ograniczeń",
   "admin.dictionary_heading_one": "Zabronione",
@@ -385,6 +399,7 @@
   "fields.observation": "Obserwacja",
   "fields.forbidden_word": "Zabronione słowo",
   "messages.invalid_credentials": "Nieprawidłowa nazwa użytkownika lub hasło.",
+  "messages.login_throttled": "Zbyt wiele prób logowania. Spróbuj ponownie za {minutes}:{seconds}.",
   "messages.invalid_request": "Nie można wykonać żądania.",
   "messages.invalid_request_reload_form": "Nieprawidłowe żądanie. Odśwież formularz i spróbuj ponownie.",
   "messages.invalid_request_reload_page": "Nieprawidłowe żądanie. Odśwież stronę i spróbuj ponownie.",
@@ -429,6 +444,8 @@
   "messages.minimum_length_saved": "Zapisano minimalną długość hasła.",
   "messages.password_validity_saved": "Zapisano ustawienie ważności hasła.",
   "messages.session_timeout_saved": "Zapisano limit braku aktywności sesji.",
+  "messages.login_limit_saved": "Zapisano limit nieudanych prób logowania.",
+  "messages.ip_login_limit_saved": "Zapisano limit nieudanych prób logowania dla adresu IP.",
   "messages.word_added": "Dodano zabronione słowo.",
   "messages.word_updated": "Zaktualizowano zabronione słowo.",
   "messages.word_deleted": "Usunięto zabronione słowo.",
@@ -463,6 +480,8 @@
   ,"messages.minimum_password_range": "Minimalna długość hasła musi być liczbą całkowitą od 14 do 128."
   ,"messages.password_validity_range": "Ważność hasła musi być liczbą całkowitą od 0 do 3650 dni."
   ,"messages.session_timeout_range": "Limit braku aktywności sesji musi być liczbą całkowitą od 1 do 1440 minut."
+  ,"messages.login_failure_limit_range": "Limit nieudanych prób logowania musi być liczbą całkowitą od 3 do 20."
+  ,"messages.ip_login_failure_limit_range": "Limit nieudanych prób logowania dla IP musi być liczbą całkowitą od 5 do 200."
   ,"messages.forbidden_word_length": "Zabronione słowo może mieć najwyżej 64 znaki."
   ,"messages.admin_unavailable": "Administracja jest tymczasowo niedostępna. Spróbuj ponownie."
   ,"messages.confirm_declassification": "Potwierdź odtajnienie przed kontynuowaniem."
