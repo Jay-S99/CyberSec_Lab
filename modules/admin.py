@@ -24,6 +24,8 @@ NOTICES = {
     "minimum-length-saved": "Minimum password length saved.",
     "password-validity-saved": "Password validity setting saved.",
     "session-timeout-saved": "Session inactivity timeout saved.",
+    "login-limit-saved": "Login failure limit saved.",
+    "ip-login-limit-saved": "IP login failure limit saved.",
     "word-added": "Forbidden word added.",
     "word-updated": "Forbidden word updated.",
     "word-deleted": "Forbidden word deleted.",
@@ -109,6 +111,18 @@ def _render_security(*, errors=(), field_errors=None, status=200):
         ),
         maximum_session_timeout_minutes=(
             security_settings.MAXIMUM_SESSION_TIMEOUT_MINUTES
+        ),
+        minimum_login_failure_limit=(
+            security_settings.MINIMUM_ACCOUNT_FAILURE_LIMIT
+        ),
+        maximum_login_failure_limit=(
+            security_settings.MAXIMUM_ACCOUNT_FAILURE_LIMIT
+        ),
+        minimum_ip_login_failure_limit=(
+            security_settings.MINIMUM_IP_FAILURE_LIMIT
+        ),
+        maximum_ip_login_failure_limit=(
+            security_settings.MAXIMUM_IP_FAILURE_LIMIT
         ),
     )
 
@@ -328,6 +342,32 @@ def update_session_timeout():
         request.form.get("session_inactivity_timeout_minutes", ""),
     )
     return _redirect_security("session-timeout-saved")
+
+
+@bp.post("/security/login-failure-limit")
+@require_permission("security.manage")
+@require_security_csrf
+def update_login_failure_limit():
+    security_settings.set_login_failure_limit(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("login_max_failed_attempts", ""),
+    )
+    return _redirect_security("login-limit-saved")
+
+
+@bp.post("/security/ip-login-failure-limit")
+@require_permission("security.manage")
+@require_security_csrf
+def update_ip_login_failure_limit():
+    security_settings.set_ip_login_failure_limit(
+        get_db(),
+        g.user["id"],
+        g.session_token,
+        request.form.get("login_ip_max_failed_attempts", ""),
+    )
+    return _redirect_security("ip-login-limit-saved")
 
 
 @bp.route("/security/forbidden-words", methods=["GET", "POST"])
