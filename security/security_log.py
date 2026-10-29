@@ -52,6 +52,26 @@ def record_security_configuration_event(
     )
 
 
+def record_login_protection_event(
+    connection, user_id, event_type, description, now
+):
+    allowed_event_types = {
+        "login_failure",
+        "account_temporarily_locked",
+        "account_lockout_expired",
+        "ip_rate_limit_triggered",
+    }
+    if event_type not in allowed_event_types:
+        raise ValueError("Unsupported login protection event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, event_type, description, format_utc(now)),
+    )
+
+
 def record_dossier_event(
     connection,
     actor_id,
