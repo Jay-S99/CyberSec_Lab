@@ -110,6 +110,16 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL CHECK (length(value) > 0)
 );
 
+CREATE TABLE IF NOT EXISTS login_throttles (
+    scope TEXT NOT NULL CHECK (scope IN ('account', 'ip')),
+    subject_hash TEXT NOT NULL CHECK (length(subject_hash) = 64),
+    failure_count INTEGER NOT NULL CHECK (failure_count > 0),
+    window_started_at TEXT NOT NULL,
+    last_failure_at TEXT NOT NULL,
+    locked_until TEXT,
+    PRIMARY KEY (scope, subject_hash)
+);
+
 CREATE TABLE IF NOT EXISTS dossiers (
     id TEXT PRIMARY KEY CHECK (id GLOB 'DV-[0-9][0-9][0-9]'),
     title TEXT NOT NULL CHECK (length(trim(title)) > 0),
@@ -189,6 +199,10 @@ CREATE INDEX IF NOT EXISTS idx_incident_reports_status ON incident_reports (stat
 CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_security_events_event_type ON security_events (event_type);
 CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events (created_at);
+CREATE INDEX IF NOT EXISTS idx_login_throttles_last_failure
+    ON login_throttles (last_failure_at);
+CREATE INDEX IF NOT EXISTS idx_login_throttles_locked_until
+    ON login_throttles (locked_until);
 
 CREATE TRIGGER IF NOT EXISTS prevent_admin_username_change
 BEFORE UPDATE OF username ON users
