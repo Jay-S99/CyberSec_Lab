@@ -1,6 +1,4 @@
-import hashlib
 import sqlite3
-from datetime import timedelta
 from functools import wraps
 
 from flask import (
@@ -16,6 +14,12 @@ from flask import (
 )
 
 from auth.messages import translate
+from auth.login_protection import (
+    ACCOUNT_SCOPE,
+    active_throttle,
+    finalize_attempt,
+    LoginThrottle,
+)
 from auth.password_policy import (
     forbidden_words_enabled,
     minimum_password_length,
@@ -251,14 +255,15 @@ def logout():
     return redirect(url_for("auth.login"), code=303)
 
 
-def authenticate(connection, username, password, now):
+def authenticate(connection, username, password, now, source_ip=None):
     if not isinstance(username, str) or not isinstance(password, str):
         return None
     normalized = username.strip()
     if not _credentials_are_shaped(normalized, password):
         return None
-    if _login_is_throttled(connection, normalized, now):
-        return None
+    throttle = active_throttle(connection, normalized, source_ip, now)
+    if throttle is not None:
+        return throttle
     user = _find_user(connection, normalized)
     permanent_hash = user["password_hash"] if user is not None else None
     permanent_ok = _verify_slot(permanent_hash, password)
@@ -275,32 +280,40 @@ def authenticate(connection, username, password, now):
         and user["is_blocked"] == 0
         and user["deleted_at"] is None
     )
+    result = None
     if allowed and permanent_ok:
         replacement = None
         if hash_needs_upgrade(permanent_hash):
             replacement = hash_password(password)
-        return LoginSuccess(
+        result = LoginSuccess(
             user,
             "password",
             None,
             permanent_hash,
             replacement,
+            normalized,
+            source_ip,
         )
-    if allowed and temporary_ok and temporary is not None:
-        return LoginSuccess(
+    elif allowed and temporary_ok and temporary is not None:
+        result = LoginSuccess(
             user,
             "temporary",
             temporary["id"],
             temporary_hash,
             None,
+            normalized,
+            source_ip,
         )
-    _record_login_failure(
-        connection,
-        user["id"] if user is not None else None,
-        normalized,
-        now,
-    )
-    return None
+    with immediate_transaction(connection):
+        throttle = finalize_attempt(
+            connection,
+            normalized,
+            source_ip,
+            user["id"] if user is not None else None,
+            now,
+            succeeded=result is not None,
+        )
+    return throttle or result
 
 
 class LoginSuccess:
@@ -311,12 +324,16 @@ class LoginSuccess:
         temporary_password_id,
         verified_hash,
         replacement_hash,
+        username=None,
+        source_ip=None,
     ):
         self.user = user
         self.credential_kind = credential_kind
         self.temporary_password_id = temporary_password_id
         self.verified_hash = verified_hash
         self.replacement_hash = replacement_hash
+        self.username = username or user["username"]
+        self.source_ip = source_ip
 
 
 def open_authenticated_session(
@@ -325,8 +342,12 @@ def open_authenticated_session(
     with immediate_transaction(connection):
         now = utc_now()
         current_user = _user_by_id(connection, result.user["id"])
+        throttle = active_throttle(
+            connection, result.username, result.source_ip, now
+        )
         if (
-            current_user is None
+            throttle is not None
+            or current_user is None
             or current_user["is_active"] != 1
             or current_user["is_blocked"] != 0
             or current_user["deleted_at"] is not None
@@ -391,7 +412,11 @@ def _submit_login():
     now = utc_now()
     try:
         connection = get_db()
-        result = authenticate(connection, username, password, now)
+        result = authenticate(
+            connection, username, password, now, request.remote_addr
+        )
+        if isinstance(result, LoginThrottle):
+            return _render_login_throttle(result, now)
         if result is None:
             return _render(
                 "login.html",
@@ -425,6 +450,24 @@ def _submit_login():
     else:
         destination = url_for("auth.home")
     return redirect(destination, code=303)
+
+
+def _render_login_throttle(throttle, now):
+    remaining = throttle.remaining_seconds(now)
+    minutes, seconds = divmod(remaining, 60)
+    response = _render(
+        "login.html",
+        errors=(),
+        lockout={
+            "expires_at": format_utc(throttle.locked_until),
+            "minutes": minutes,
+            "seconds": f"{seconds:02d}",
+        },
+        status=429 if throttle.scope != ACCOUNT_SCOPE else 200,
+    )
+    if throttle.scope != ACCOUNT_SCOPE:
+        response.headers["Retry-After"] = str(remaining)
+    return response
 
 
 def _submit_password_change(require_current):
@@ -604,43 +647,6 @@ def _verify_slot(stored_hash, password):
         return verify_password(stored_hash, password)
     verify_password(dummy_password_hash(), password)
     return False
-
-
-def _login_is_throttled(connection, username, now):
-    limit = int(current_app.config.get("LOGIN_ATTEMPT_LIMIT", 5))
-    window = int(current_app.config.get("LOGIN_ATTEMPT_WINDOW_SECONDS", 900))
-    window_start = format_utc(now - timedelta(seconds=window))
-    count = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM security_events
-        WHERE event_type = 'login_failure'
-          AND description = ?
-          AND created_at >= ?
-        """,
-        (_failure_description(username), window_start),
-    ).fetchone()["total"]
-    return count >= limit
-
-
-def _record_login_failure(connection, user_id, username, now):
-    connection.execute(
-        """
-        INSERT INTO security_events (
-            user_id,
-            event_type,
-            description,
-            created_at
-        ) VALUES (?, 'login_failure', ?, ?)
-        """,
-        (user_id, _failure_description(username), format_utc(now)),
-    )
-    connection.commit()
-
-
-def _failure_description(username):
-    digest = hashlib.sha256(username.strip().casefold().encode("utf-8")).hexdigest()
-    return f"login_failure:{digest}"
 
 
 def _find_user(connection, username):
