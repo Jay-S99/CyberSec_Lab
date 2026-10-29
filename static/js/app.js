@@ -81,4 +81,28 @@
       });
     }
   }
+
+  const countdown = document.querySelector("[data-lockout-countdown]");
+  if (countdown) {
+    const lockedUntil = Date.parse(countdown.dataset.lockoutUntil);
+    const message = countdown.dataset.lockoutMessage;
+    if (Number.isFinite(lockedUntil) && message) {
+      let timer = null;
+      const updateCountdown = () => {
+        const remaining = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+        const minutes = Math.floor(remaining / 60);
+        const seconds = String(remaining % 60).padStart(2, "0");
+        countdown.textContent = message
+          .replace("{minutes}", String(minutes))
+          .replace("{seconds}", seconds);
+        if (remaining === 0 && timer !== null) {
+          window.clearInterval(timer);
+        }
+      };
+      updateCountdown();
+      if (lockedUntil > Date.now()) {
+        timer = window.setInterval(updateCountdown, 1000);
+      }
+    }
+  }
 })();
