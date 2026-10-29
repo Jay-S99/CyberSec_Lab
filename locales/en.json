@@ -316,6 +316,20 @@
   "admin.locked": "LOCKED",
   "admin.temporary_credentials": "Temporary credentials",
   "admin.temporary_credentials_help": "{hours} hours maximum validity. This safety limit is read-only. Temporary credentials still require a permanent password at first sign-in.",
+  "admin.login_protection_eyebrow": "Authentication security // Automated defense",
+  "admin.login_protection": "Login protection",
+  "admin.login_protection_intro": "Limit failed authentication attempts. Account and IP cooldowns last a fixed {minutes} minutes.",
+  "admin.fixed_lockout_duration": "Account lockout duration: {minutes} minutes (read-only).",
+  "admin.account_login_limit": "Account attempt limit",
+  "admin.account_login_limit_intro": "Temporarily lock a submitted account identity after repeated failures within 15 minutes.",
+  "admin.failed_attempts": "Maximum failed attempts",
+  "admin.account_login_limit_help": "Whole number from {minimum} to {maximum}. The lockout duration is fixed at {minutes} minutes.",
+  "admin.save_login_limit": "Save account limit",
+  "admin.ip_login_limit": "IP attempt limit",
+  "admin.ip_login_limit_intro": "Limit failures across different usernames from the same direct source address.",
+  "admin.failed_attempts_per_ip": "Maximum failed attempts per IP",
+  "admin.ip_login_limit_help": "Whole number from {minimum} to {maximum}. The cooldown is fixed at {minutes} minutes.",
+  "admin.save_ip_login_limit": "Save IP limit",
   "admin.dictionary_title": "Forbidden words",
   "admin.dictionary_eyebrow": "Security policy // Restricted dictionary",
   "admin.dictionary_heading_one": "Forbidden",
@@ -385,6 +399,7 @@
   "fields.observation": "Observation",
   "fields.forbidden_word": "A forbidden word",
   "messages.invalid_credentials": "Invalid username or password.",
+  "messages.login_throttled": "Too many login attempts. Please try again in {minutes}:{seconds}.",
   "messages.invalid_request": "The request could not be completed.",
   "messages.invalid_request_reload_form": "Invalid request. Reload the form and try again.",
   "messages.invalid_request_reload_page": "Invalid request. Reload the page and try again.",
@@ -429,6 +444,8 @@
   "messages.minimum_length_saved": "Minimum password length saved.",
   "messages.password_validity_saved": "Password validity setting saved.",
   "messages.session_timeout_saved": "Session inactivity timeout saved.",
+  "messages.login_limit_saved": "Login failure limit saved.",
+  "messages.ip_login_limit_saved": "IP login failure limit saved.",
   "messages.word_added": "Forbidden word added.",
   "messages.word_updated": "Forbidden word updated.",
   "messages.word_deleted": "Forbidden word deleted.",
@@ -463,6 +480,8 @@
   ,"messages.minimum_password_range": "Minimum password length must be a whole number from 14 to 128."
   ,"messages.password_validity_range": "Password validity must be a whole number from 0 to 3650 days."
   ,"messages.session_timeout_range": "Session inactivity timeout must be a whole number from 1 to 1440 minutes."
+  ,"messages.login_failure_limit_range": "Login failure limit must be a whole number from 3 to 20."
+  ,"messages.ip_login_failure_limit_range": "IP login failure limit must be a whole number from 5 to 200."
   ,"messages.forbidden_word_length": "A forbidden word cannot exceed 64 characters."
   ,"messages.admin_unavailable": "Administration is temporarily unavailable. Please try again."
   ,"messages.confirm_declassification": "Confirm declassification before continuing."
