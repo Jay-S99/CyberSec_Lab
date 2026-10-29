@@ -30,6 +30,11 @@
         {% endfor %}
       </div>
     {% endif %}
+    {% if lockout %}
+      <div role="alert">
+        <p data-lockout-countdown data-lockout-until="{{ lockout.expires_at }}" data-lockout-message="{{ t('messages.login_throttled', minutes='{minutes}', seconds='{seconds}') }}">{{ t('messages.login_throttled', minutes=lockout.minutes, seconds=lockout.seconds) }}</p>
+      </div>
+    {% endif %}
     <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label for="username">{{ t('login.operator_id') }}</label>
