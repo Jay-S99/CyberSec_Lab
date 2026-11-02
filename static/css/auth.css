@@ -2064,6 +2064,17 @@ a.record-id:hover {
   margin-top: 1.4rem;
 }
 
+.turnstile-frame {
+  width: 100%;
+  min-height: 65px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.turnstile-frame .cf-turnstile {
+  width: 100%;
+}
+
 .auth-legal {
   padding-top: 1rem;
   margin: 1.3rem 0 0;
