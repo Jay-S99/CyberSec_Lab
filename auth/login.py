@@ -19,6 +19,7 @@ from auth.login_protection import (
     active_throttle,
     finalize_attempt,
     LoginThrottle,
+    record_honeypot_attempt,
 )
 from auth.password_policy import (
     forbidden_words_enabled,
@@ -202,6 +203,8 @@ def login():
             errors=(translate("invalid_request"),),
             status=400,
         )
+    if request.form.get("homepage_url", ""):
+        return _reject_honeypot_login()
     turnstile_failure = _verify_protected_form("login")
     if turnstile_failure is not None:
         return _render(
@@ -210,6 +213,32 @@ def login():
             status=503 if turnstile_failure == "turnstile_unavailable" else 400,
         )
     return _submit_login()
+
+
+def _reject_honeypot_login():
+    now = utc_now()
+    try:
+        connection = get_db()
+        with immediate_transaction(connection):
+            throttle = record_honeypot_attempt(
+                connection,
+                request.remote_addr,
+                now,
+            )
+        throttle = throttle or active_throttle(
+            connection,
+            request.form.get("username", ""),
+            request.remote_addr,
+            now,
+        )
+        if throttle is not None:
+            return _render_login_throttle(throttle, now)
+    except sqlite3.Error:
+        current_app.logger.error("Login honeypot event could not be recorded.")
+    return _render(
+        "login.html",
+        errors=(translate("invalid_credentials"),),
+    )
 
 
 @bp.get("/")

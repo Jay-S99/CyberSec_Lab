@@ -57,6 +57,7 @@ def record_login_protection_event(
 ):
     allowed_event_types = {
         "login_failure",
+        "login_honeypot_triggered",
         "account_temporarily_locked",
         "account_lockout_expired",
         "ip_rate_limit_triggered",

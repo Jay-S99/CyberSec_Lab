@@ -144,6 +144,48 @@ def finalize_attempt(
     return ip_throttle or account_throttle
 
 
+def record_honeypot_attempt(connection, source_ip, now):
+    ip_key = ip_subject(source_ip)
+    if ip_key is not None:
+        throttle = _active_scope(connection, IP_SCOPE, ip_key, now)
+        if throttle is None:
+            throttle = _record_scope_failure(
+                connection,
+                IP_SCOPE,
+                ip_key,
+                ip_failure_limit(connection),
+                now,
+            )
+        source_marker = f"source_key={ip_key}"
+    else:
+        throttle = None
+        source_marker = "source_key=unavailable"
+
+    description = f"Suspected automated login; {source_marker}."
+    cutoff = format_utc(now - timedelta(minutes=FAILURE_WINDOW_MINUTES))
+    already_recorded = connection.execute(
+        """
+        SELECT 1
+        FROM security_events
+        WHERE event_type = 'login_honeypot_triggered'
+          AND description = ?
+          AND created_at >= ?
+        LIMIT 1
+        """,
+        (description, cutoff),
+    ).fetchone()
+    if already_recorded is None:
+        _record_event(
+            connection,
+            None,
+            "login_honeypot_triggered",
+            description,
+            now,
+        )
+    _prune_stale_rows(connection, now)
+    return throttle
+
+
 def _active_scope(connection, scope, subject_hash, now):
     if subject_hash is None:
         return None

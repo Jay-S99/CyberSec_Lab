@@ -37,6 +37,10 @@
     {% endif %}
     <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="visually-hidden" aria-hidden="true">
+        <label for="homepage_url">Homepage URL</label>
+        <input id="homepage_url" name="homepage_url" type="text" tabindex="-1" autocomplete="off">
+      </div>
       <label for="username">{{ t('login.operator_id') }}</label>
       <div class="field-frame">
         <span aria-hidden="true">ID</span>
