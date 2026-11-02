@@ -42,6 +42,14 @@ def _turnstile_keys(environment):
     )
 
 
+def _bounded_integer(name, default, minimum, maximum):
+    try:
+        value = int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+    return min(max(value, minimum), maximum)
+
+
 class Config:
     DEBUG = False
     TESTING = False
@@ -71,3 +79,12 @@ class Config:
         "https://challenges.cloudflare.com/turnstile/v0/siteverify"
     )
     TURNSTILE_TIMEOUT_SECONDS = 5
+    CANARY_ACCOUNT_ALERT_URL = os.environ.get(
+        "CANARY_ACCOUNT_ALERT_URL", ""
+    ).strip()
+    CANARY_ACCOUNT_ALERT_TIMEOUT_SECONDS = _bounded_integer(
+        "CANARY_ACCOUNT_ALERT_TIMEOUT_SECONDS", 3, 1, 10
+    )
+    CANARY_ACCOUNT_ALERT_COOLDOWN_SECONDS = _bounded_integer(
+        "CANARY_ACCOUNT_ALERT_COOLDOWN_SECONDS", 300, 60, 3600
+    )
