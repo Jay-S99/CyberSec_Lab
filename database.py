@@ -13,6 +13,7 @@ REQUIRED_TABLES = (
     "permissions",
     "role_permissions",
     "users",
+    "canary_identities",
     "password_history",
     "temporary_passwords",
     "sessions",
@@ -99,7 +100,23 @@ def _column_names(connection, table_name):
 
 def apply_schema_updates(connection):
     """Add nullable lifecycle columns to older databases without losing rows."""
-    changed = not _table_exists(connection, "login_throttles")
+    changed = (
+        not _table_exists(connection, "login_throttles")
+        or not _table_exists(connection, "canary_identities")
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS canary_identities (
+            id INTEGER PRIMARY KEY,
+            identifier TEXT NOT NULL COLLATE NOCASE UNIQUE
+                CHECK (length(trim(identifier)) > 0),
+            organization TEXT NOT NULL CHECK (organization = 'HYDRA'),
+            can_authenticate INTEGER NOT NULL DEFAULT 0
+                CHECK (can_authenticate = 0),
+            created_at TEXT NOT NULL
+        )
+        """
+    )
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS login_throttles (

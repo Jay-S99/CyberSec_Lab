@@ -94,6 +94,52 @@ def record_turnstile_event(connection, user_id, event_type, action, now):
     )
 
 
+def record_canary_account_event(
+    connection, identifier, source_ip, user_agent, now
+):
+    safe_ip = _bounded_log_value(source_ip, 64)
+    safe_user_agent = _bounded_log_value(user_agent, 256)
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (NULL, 'canary_account_triggered', ?, ?)
+        """,
+        (
+            "Canary account targeted; category=honeytoken_detection; "
+            f"severity=high; identifier={identifier}; source_ip={safe_ip}; "
+            f"user_agent={safe_user_agent}.",
+            format_utc(now),
+        ),
+    )
+
+
+def _bounded_log_value(value, maximum_length):
+    normalized = "".join(
+        character if character.isprintable() else "?"
+        for character in str(value or "unknown")
+    )
+    return normalized[:maximum_length]
+
+
+def record_canary_alert_event(connection, event_type, description, now):
+    allowed_event_types = {
+        "canary_alert_dispatch_started",
+        "canary_alert_dispatch_succeeded",
+        "canary_alert_dispatch_failed",
+        "canary_alert_not_configured",
+        "canary_alert_configuration_invalid",
+    }
+    if event_type not in allowed_event_types:
+        raise ValueError("Unsupported canary alert event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (NULL, ?, ?, ?)
+        """,
+        (event_type, description, format_utc(now)),
+    )
+
+
 def record_dossier_event(
     connection,
     actor_id,

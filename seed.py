@@ -127,6 +127,10 @@ USERS = (
     ("reader02", "reader"),
 )
 
+CANARY_IDENTITIES = (
+    ("hydra_backup_admin", "HYDRA"),
+)
+
 SETTINGS = {
     "minimum_password_length": "14",
     "forbidden_words_enabled": "true",
@@ -309,6 +313,7 @@ def seed_database():
         _seed_permissions(connection)
         _seed_role_permissions(connection, existing_roles, existing_permissions)
         _seed_users(connection, timestamp)
+        _seed_canary_identities(connection, timestamp)
         _seed_settings(connection)
         _seed_forbidden_words(
             connection, timestamp, dictionary_was_initialized
@@ -451,6 +456,30 @@ def _seed_users(connection, timestamp):
             )
             """,
             (username, role_id, timestamp, timestamp, username),
+        )
+
+
+def _seed_canary_identities(connection, timestamp):
+    for identifier, organization in CANARY_IDENTITIES:
+        collision = connection.execute(
+            "SELECT 1 FROM users WHERE username = ?",
+            (identifier,),
+        ).fetchone()
+        if collision is not None:
+            raise RuntimeError(
+                "Canary identity collides with an existing user account."
+            )
+        connection.execute(
+            """
+            INSERT INTO canary_identities (
+                identifier, organization, can_authenticate, created_at
+            )
+            SELECT ?, ?, 0, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM canary_identities WHERE identifier = ?
+            )
+            """,
+            (identifier, organization, timestamp, identifier),
         )
 
 

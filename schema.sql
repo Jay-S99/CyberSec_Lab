@@ -62,6 +62,15 @@ CREATE TABLE IF NOT EXISTS users (
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS canary_identities (
+    id INTEGER PRIMARY KEY,
+    identifier TEXT NOT NULL COLLATE NOCASE UNIQUE
+        CHECK (length(trim(identifier)) > 0),
+    organization TEXT NOT NULL CHECK (organization = 'HYDRA'),
+    can_authenticate INTEGER NOT NULL DEFAULT 0 CHECK (can_authenticate = 0),
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS password_history (
     id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL,
