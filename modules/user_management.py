@@ -84,8 +84,14 @@ def _validated_username(connection, username, user_id=None):
             "or hyphens, and start with a letter or digit."
         )
     duplicate = connection.execute(
-        "SELECT id FROM users WHERE username = ? AND (? IS NULL OR id <> ?)",
-        (normalized, user_id, user_id),
+        """
+        SELECT id FROM users
+        WHERE username = ? AND (? IS NULL OR id <> ?)
+        UNION ALL
+        SELECT id FROM canary_identities WHERE identifier = ?
+        LIMIT 1
+        """,
+        (normalized, user_id, user_id, normalized),
     ).fetchone()
     if duplicate:
         raise UserManagementError("This username is already reserved.")
