@@ -56,7 +56,12 @@ from auth.temp_passwords import (
 from database import format_utc, get_db, immediate_transaction, utc_now
 from localization import localize_context
 from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
-from security.security_log import record_session_event, record_turnstile_event
+from security.canary_account import dispatch_canary_alert, find_canary_identity
+from security.security_log import (
+    record_canary_account_event,
+    record_session_event,
+    record_turnstile_event,
+)
 from security.turnstile import verify_turnstile
 from security.responses import (
     authentication_required_response,
@@ -333,7 +338,9 @@ def logout():
     return redirect(url_for("auth.login"), code=303)
 
 
-def authenticate(connection, username, password, now, source_ip=None):
+def authenticate(
+    connection, username, password, now, source_ip=None, user_agent=None
+):
     if not isinstance(username, str) or not isinstance(password, str):
         return None
     normalized = username.strip()
@@ -342,6 +349,7 @@ def authenticate(connection, username, password, now, source_ip=None):
     throttle = active_throttle(connection, normalized, source_ip, now)
     if throttle is not None:
         return throttle
+    canary = find_canary_identity(connection, normalized)
     user = _find_user(connection, normalized)
     permanent_hash = user["password_hash"] if user is not None else None
     permanent_ok = _verify_slot(permanent_hash, password)
@@ -391,6 +399,16 @@ def authenticate(connection, username, password, now, source_ip=None):
             now,
             succeeded=result is not None,
         )
+        if canary is not None:
+            record_canary_account_event(
+                connection,
+                canary["identifier"],
+                source_ip,
+                user_agent,
+                now,
+            )
+    if canary is not None and throttle is None:
+        return CanaryAccountTrigger()
     return throttle or result
 
 
@@ -412,6 +430,10 @@ class LoginSuccess:
         self.replacement_hash = replacement_hash
         self.username = username or user["username"]
         self.source_ip = source_ip
+
+
+class CanaryAccountTrigger:
+    pass
 
 
 def open_authenticated_session(
@@ -491,10 +513,26 @@ def _submit_login():
     try:
         connection = get_db()
         result = authenticate(
-            connection, username, password, now, request.remote_addr
+            connection,
+            username,
+            password,
+            now,
+            request.remote_addr,
+            request.headers.get("User-Agent", ""),
         )
         if isinstance(result, LoginThrottle):
             return _render_login_throttle(result, now)
+        if isinstance(result, CanaryAccountTrigger):
+            try:
+                dispatch_canary_alert(connection)
+            except Exception:
+                current_app.logger.error(
+                    "Canarytokens alert dispatch could not be completed."
+                )
+            return _render(
+                "login.html",
+                errors=(translate("invalid_credentials"),),
+            )
         if result is None:
             return _render(
                 "login.html",
