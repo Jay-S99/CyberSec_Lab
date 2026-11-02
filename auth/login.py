@@ -55,7 +55,8 @@ from auth.temp_passwords import (
 from database import format_utc, get_db, immediate_transaction, utc_now
 from localization import localize_context
 from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
-from security.security_log import record_session_event
+from security.security_log import record_session_event, record_turnstile_event
+from security.turnstile import verify_turnstile
 from security.responses import (
     authentication_required_response,
     wants_json_response,
@@ -148,10 +149,16 @@ def finalize_response(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Content-Security-Policy"] = (
+    content_security_policy = (
         "default-src 'self'; base-uri 'none'; form-action 'self'; "
         "frame-ancestors 'none'; object-src 'none'"
     )
+    if request.endpoint in {"auth.login", "auth.change_password"}:
+        content_security_policy += (
+            "; script-src 'self' https://challenges.cloudflare.com; "
+            "frame-src https://challenges.cloudflare.com"
+        )
+    response.headers["Content-Security-Policy"] = content_security_policy
     if current_app.config.get("ENVIRONMENT") == "production":
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
@@ -195,6 +202,13 @@ def login():
             errors=(translate("invalid_request"),),
             status=400,
         )
+    turnstile_failure = _verify_protected_form("login")
+    if turnstile_failure is not None:
+        return _render(
+            "login.html",
+            errors=(translate(turnstile_failure),),
+            status=503 if turnstile_failure == "turnstile_unavailable" else 400,
+        )
     return _submit_login()
 
 
@@ -213,6 +227,11 @@ def home():
 @bp.route("/password/change", methods=["GET", "POST"])
 def change_password():
     require_current = _requires_current_password()
+    action = (
+        "password_setup"
+        if _change_reason(utc_now()) == "setup"
+        else "password_change"
+    )
     if request.method == "GET":
         return _render_change(require_current, errors=())
     if not csrf_tokens_match():
@@ -221,7 +240,37 @@ def change_password():
             errors=(translate("invalid_request"),),
             status=400,
         )
+    turnstile_failure = _verify_protected_form(action)
+    if turnstile_failure is not None:
+        return _render_change(
+            require_current,
+            errors=(translate(turnstile_failure),),
+            status=503 if turnstile_failure == "turnstile_unavailable" else 400,
+        )
     return _submit_password_change(require_current)
+
+
+def _verify_protected_form(action):
+    result = verify_turnstile(
+        request.form.get("cf-turnstile-response", ""),
+        expected_action=action,
+        remote_ip=request.remote_addr,
+    )
+    if result.accepted:
+        return None
+    try:
+        connection = get_db()
+        with immediate_transaction(connection):
+            record_turnstile_event(
+                connection,
+                g.user["id"] if g.user is not None else None,
+                result.event_type,
+                action,
+                utc_now(),
+            )
+    except sqlite3.Error:
+        current_app.logger.error("Turnstile security event could not be recorded.")
+    return result.message_code
 
 
 @bp.post("/logout")
@@ -564,6 +613,11 @@ def _replace_password_and_sessions(
 def _render(template, status=200, **context):
     token = new_csrf_token()
     context["csrf_token"] = token
+    if template in {"login.html", "change_password.html"}:
+        context.setdefault(
+            "turnstile_site_key",
+            current_app.config.get("TURNSTILE_SITE_KEY", ""),
+        )
     context = localize_context(context)
     response = make_response(render_template(template, **context), status)
     set_csrf_cookie(response, token)
@@ -590,6 +644,9 @@ def _render_change(require_current, errors, status=200):
         forbidden_words_enabled=forbidden_words_enabled(connection),
         intro=translate(intro_codes[reason]),
         heading=heading,
+        turnstile_action=(
+            "password_setup" if reason == "setup" else "password_change"
+        ),
         username=g.user["username"],
     )
 

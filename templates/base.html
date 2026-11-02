@@ -8,6 +8,9 @@
   <title>{% block title %}DoomVault{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
   <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% if turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
+  {% endif %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#main-content">{{ t('common.skip_to_main') }}</a>

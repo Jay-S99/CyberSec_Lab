@@ -47,6 +47,13 @@
         <span aria-hidden="true">••</span>
         <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" placeholder="{{ t('login.password_placeholder') }}" required>
       </div>
+      {% if turnstile_site_key %}
+      <div class="turnstile-frame">
+        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-action="login" data-theme="dark" data-size="flexible" data-language="{{ current_language }}" data-refresh-expired="auto"></div>
+      </div>
+      {% else %}
+      <p role="alert">{{ t('messages.turnstile_unavailable') }}</p>
+      {% endif %}
       <button class="button button-primary button-full" type="submit"><span>{{ t('login.authenticate') }}</span><span aria-hidden="true">→</span></button>
     </form>
     <p class="auth-legal">{{ t('login.security_notice') }}</p>
