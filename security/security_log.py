@@ -72,6 +72,27 @@ def record_login_protection_event(
     )
 
 
+def record_turnstile_event(connection, user_id, event_type, action, now):
+    descriptions = {
+        "turnstile_verification_failed": "Turnstile verification rejected",
+        "turnstile_verification_unavailable": "Turnstile verification unavailable",
+    }
+    if event_type not in descriptions:
+        raise ValueError("Unsupported Turnstile event.")
+    connection.execute(
+        """
+        INSERT INTO security_events (user_id, event_type, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            event_type,
+            f"{descriptions[event_type]}; action={action}.",
+            format_utc(now),
+        ),
+    )
+
+
 def record_dossier_event(
     connection,
     actor_id,
