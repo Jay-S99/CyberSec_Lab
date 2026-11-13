@@ -88,3 +88,4 @@ class Config:
     CANARY_ACCOUNT_ALERT_COOLDOWN_SECONDS = _bounded_integer(
         "CANARY_ACCOUNT_ALERT_COOLDOWN_SECONDS", 300, 60, 3600
     )
+    CANARY_DNS_HOSTNAME = os.environ.get("CANARY_DNS_HOSTNAME", "").strip()

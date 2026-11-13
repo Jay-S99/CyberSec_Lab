@@ -10,6 +10,7 @@ from localization import init_app as init_localization
 from modules.admin import bp as admin_blueprint
 from modules.dossiers import bp as dossiers_blueprint
 from modules.incidents import bp as incidents_blueprint
+from security.dns_canary import init_app as init_dns_canary
 from security.errors import init_app as init_errors
 from security.turnstile import init_app as init_turnstile
 from seed import init_app as init_seed
@@ -24,6 +25,7 @@ def create_app(config_class=Config):
     init_database(application)
     init_seed(application)
     init_turnstile(application)
+    init_dns_canary(application)
     init_login(application)
     init_provisioning(application)
     init_localization(application)

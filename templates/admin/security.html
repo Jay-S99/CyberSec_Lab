@@ -108,4 +108,12 @@
   <div class="panel-heading"><span>{{ t('admin.locked') }}</span><h2 id="temporary-password-heading">{{ t('admin.temporary_credentials') }}</h2></div>
   <p>{{ t('admin.temporary_credentials_help', hours=settings.temporary_password_validity_hours) }}</p>
 </section>
+
+<section class="admin-readonly" aria-labelledby="dns-canary-heading">
+  <div class="panel-heading"><span>{{ t('admin.read_only') }}</span><h2 id="dns-canary-heading">{{ t('admin.dns_canary') }}</h2></div>
+  <p>{{ t('admin.dns_canary_intro') }}</p>
+  <p><strong>{{ t('admin.dns_canary_configuration') }}:</strong> {{ t('admin.status_configured') if dns_canary.configured else t('admin.status_not_configured') }}</p>
+  <p><strong>{{ t('admin.dns_canary_decoy') }}:</strong> {{ t('admin.status_provisioned') if dns_canary.provisioned else t('admin.status_not_provisioned') }}</p>
+  <p class="admin-muted">{{ t('admin.dns_canary_help') }}</p>
+</section>
 {% endblock %}

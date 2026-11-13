@@ -9,6 +9,7 @@ from database import get_db
 from localization import translate_message
 from modules import security_settings, user_management
 from security.csrf import csrf_tokens_match
+from security.dns_canary import dns_canary_status
 from security.permissions import require_permission
 
 
@@ -102,6 +103,10 @@ def _render_security(*, errors=(), field_errors=None, status=200):
         field_errors=field_errors or {},
         notice=NOTICES.get(request.args.get("notice")),
         settings=security_settings.current_settings(get_db()),
+        dns_canary=dns_canary_status(
+            current_app.instance_path,
+            current_app.config.get("CANARY_DNS_HOSTNAME", ""),
+        ),
         minimum_password_length=security_settings.MINIMUM_PASSWORD_LENGTH,
         maximum_password_length=(
             security_settings.MAXIMUM_CONFIGURED_PASSWORD_LENGTH
