@@ -22,6 +22,7 @@ htmlcov/
 *.sqlite3
 instance/*
 !instance/.gitkeep
+instance/bot_simulation_runs/
 
 .env
 .env.*
