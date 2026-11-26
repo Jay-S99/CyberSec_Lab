@@ -11,6 +11,7 @@ from modules.admin import bp as admin_blueprint
 from modules.dossiers import bp as dossiers_blueprint
 from modules.incidents import bp as incidents_blueprint
 from security.dns_canary import init_app as init_dns_canary
+from security.audit_integrity import init_app as init_audit_integrity
 from security.errors import init_app as init_errors
 from security.turnstile import init_app as init_turnstile
 from seed import init_app as init_seed
@@ -23,6 +24,7 @@ def create_app(config_class=Config):
         application.config["AUTH_COOKIE_SECURE"] = True
     os.makedirs(application.instance_path, exist_ok=True)
     init_database(application)
+    init_audit_integrity(application)
     init_seed(application)
     init_turnstile(application)
     init_dns_canary(application)
