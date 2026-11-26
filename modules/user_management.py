@@ -6,7 +6,7 @@ from auth.sessions import revoke_all_sessions, validate_session
 from auth.temp_passwords import issue_temporary_credential
 from database import format_utc, immediate_transaction, utc_now
 from security.permissions import get_role_permissions
-from security.security_log import record_admin_event
+from security.security_log import record_admin_event, record_security_event
 from seed import ROLES
 
 
@@ -207,6 +207,15 @@ def create_user(
             credential = issue_temporary_credential(
                 connection, get_user(connection, user_id), now, hours=12
             )
+            record_security_event(
+                connection,
+                "temporary_password_provisioned",
+                f"Temporary credential provisioned; target_user_id={user_id}.",
+                actor_id=actor_id,
+                target_user_id=user_id,
+                outcome="SUCCESS",
+                now=now,
+            )
         record_admin_event(connection, actor_id, user_id, "user_created", now)
     return user_id, credential
 
@@ -278,5 +287,5 @@ def reset_password(connection, actor_id, session_token, user_id):
         credential = issue_temporary_credential(
             connection, user, now, reset=True, hours=12
         )
-        record_admin_event(connection, actor_id, user_id, "user_password_reset", now)
+        record_admin_event(connection, actor_id, user_id, "password_reset", now)
     return credential
