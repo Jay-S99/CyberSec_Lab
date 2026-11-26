@@ -182,10 +182,17 @@ CREATE TABLE IF NOT EXISTS incident_reports (
 CREATE TABLE IF NOT EXISTS security_events (
     id INTEGER PRIMARY KEY,
     user_id INTEGER,
+    actor_type TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK (
+        actor_type IN ('USER', 'UNAUTHENTICATED', 'SYSTEM', 'UNKNOWN')
+    ),
+    target_user_id INTEGER,
+    ip_address TEXT,
     event_type TEXT NOT NULL CHECK (length(trim(event_type)) > 0),
     description TEXT NOT NULL CHECK (length(trim(description)) > 0),
+    outcome TEXT CHECK (outcome IN ('SUCCESS', 'FAILURE') OR outcome IS NULL),
     created_at TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
+    FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_role_id ON users (role_id);
@@ -208,6 +215,8 @@ CREATE INDEX IF NOT EXISTS idx_incident_reports_status ON incident_reports (stat
 CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_security_events_event_type ON security_events (event_type);
 CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events (created_at);
+CREATE INDEX IF NOT EXISTS idx_security_events_target_user_id
+    ON security_events (target_user_id);
 CREATE INDEX IF NOT EXISTS idx_login_throttles_last_failure
     ON login_throttles (last_failure_at);
 CREATE INDEX IF NOT EXISTS idx_login_throttles_locked_until

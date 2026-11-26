@@ -92,7 +92,7 @@ def _table_exists(connection, table_name):
 
 
 def _column_names(connection, table_name):
-    if table_name not in {"users", "sessions", "dossiers"}:
+    if table_name not in {"users", "sessions", "dossiers", "security_events"}:
         raise ValueError("Unsupported table for schema inspection.")
     rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
     return {row["name"] for row in rows}
@@ -207,6 +207,31 @@ def apply_schema_updates(connection):
                     f"ALTER TABLE dossiers ADD COLUMN {column_name} {definition}"
                 )
                 changed = True
+    if _table_exists(connection, "security_events"):
+        event_columns = _column_names(connection, "security_events")
+        event_additions = (
+            (
+                "actor_type",
+                "TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK (actor_type IN "
+                "('USER', 'UNAUTHENTICATED', 'SYSTEM', 'UNKNOWN'))",
+            ),
+            ("target_user_id", "INTEGER REFERENCES users (id) ON DELETE RESTRICT"),
+            ("ip_address", "TEXT"),
+            (
+                "outcome",
+                "TEXT CHECK (outcome IN ('SUCCESS', 'FAILURE') OR outcome IS NULL)",
+            ),
+        )
+        for column_name, definition in event_additions:
+            if column_name not in event_columns:
+                connection.execute(
+                    f"ALTER TABLE security_events ADD COLUMN {column_name} {definition}"
+                )
+                changed = True
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_security_events_target_user_id "
+            "ON security_events (target_user_id)"
+        )
     if changed:
         connection.commit()
 
