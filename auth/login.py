@@ -59,6 +59,7 @@ from security.csrf import csrf_tokens_match, new_csrf_token, set_csrf_cookie
 from security.canary_account import dispatch_canary_alert, find_canary_identity
 from security.security_log import (
     record_canary_account_event,
+    record_security_event,
     record_session_event,
     record_turnstile_event,
 )
@@ -503,6 +504,16 @@ def open_authenticated_session(
                 else None
             ),
         )
+        record_security_event(
+            connection,
+            "login_success",
+            f"Authentication succeeded; credential_kind={result.credential_kind}.",
+            actor_id=result.user["id"],
+            target_user_id=result.user["id"],
+            outcome="SUCCESS",
+            now=now,
+            source_ip=result.source_ip,
+        )
     return token, max_age
 
 
@@ -595,6 +606,9 @@ def _submit_password_change(require_current):
         current_password = request.form.get("current_password", "")
         stored_hash = g.user["password_hash"] or ""
         if not verify_password(stored_hash, current_password):
+            _record_password_change_failure(
+                connection, "Current password verification failed."
+            )
             return _render_change(
                 True,
                 errors=(translate("current_password_incorrect"),),
@@ -606,6 +620,9 @@ def _submit_password_change(require_current):
         confirmation=confirmation,
     )
     if not policy.accepted:
+        _record_password_change_failure(
+            connection, "Submitted password did not satisfy validation rules."
+        )
         return _render_change(require_current, errors=policy.messages())
     try:
         token, max_age = _commit_password_change(
@@ -615,6 +632,9 @@ def _submit_password_change(require_current):
             now,
         )
     except CredentialRejected as error:
+        _record_password_change_failure(
+            connection, "Password change could not be completed safely."
+        )
         if g.suppress_session_cookie:
             notice = "session-expired" if g.session_expired else None
             return redirect(url_for("auth.login", notice=notice), code=303)
@@ -674,7 +694,32 @@ def _replace_password_and_sessions(
     _session_id, token, max_age = create_session(
         connection, user["id"], now, "password"
     )
+    record_security_event(
+        connection,
+        "password_change_success",
+        "Permanent password updated.",
+        actor_id=user["id"],
+        target_user_id=user["id"],
+        outcome="SUCCESS",
+        now=now,
+    )
     return token, max_age
+
+
+def _record_password_change_failure(connection, description):
+    try:
+        with immediate_transaction(connection):
+            record_security_event(
+                connection,
+                "password_change_failed",
+                description,
+                actor_id=g.user["id"],
+                target_user_id=g.user["id"],
+                outcome="FAILURE",
+                now=utc_now(),
+            )
+    except sqlite3.Error:
+        current_app.logger.error("Password change failure could not be recorded.")
 
 
 def _render(template, status=200, **context):
