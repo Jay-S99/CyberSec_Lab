@@ -10,6 +10,25 @@
   <a class="button button-primary" href="{{ url_for('admin.forbidden_words') }}">{{ t('admin.forbidden_words') }} <span aria-hidden="true">→</span></a>
 </div>
 
+<section class="admin-readonly" aria-labelledby="audit-integrity-heading">
+  <div class="panel-heading"><span>{{ t('admin.audit_integrity_badge') }}</span><h2 id="audit-integrity-heading">{{ t('admin.audit_integrity') }}</h2></div>
+  <p>{{ t('admin.audit_integrity_intro') }}</p>
+  {% if integrity_result %}
+    <div role="{{ 'status' if integrity_result.status == 'INTACT' else 'alert' }}">
+      <p><strong>{{ t('admin.audit_integrity_' ~ integrity_result.status|lower) }}</strong></p>
+      <p>{{ t('admin.audit_integrity_checked') }}: {{ integrity_result.checked_entries }}</p>
+      {% if integrity_result.first_affected_event_id %}<p>{{ t('admin.audit_integrity_affected') }}: #{{ integrity_result.first_affected_event_id }}</p>{% endif %}
+      {% if integrity_reason %}<p>{{ integrity_reason }}</p>{% endif %}
+      <p>{{ t('admin.audit_integrity_verified_at') }}: {{ integrity_result.verified_at_utc }}</p>
+    </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin.verify_audit_integrity') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button button-primary" type="submit">{{ t('admin.audit_integrity_verify') }}</button>
+  </form>
+  <p class="admin-muted">{{ t('admin.audit_integrity_help') }}</p>
+</section>
+
 <div class="admin-policy-grid">
   <section class="admin-policy-card" aria-labelledby="forbidden-policy-heading">
     <div class="policy-icon" aria-hidden="true">01</div><h2 id="forbidden-policy-heading">{{ t('admin.forbidden_policy') }}</h2>

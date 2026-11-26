@@ -5,12 +5,14 @@ from flask import Blueprint, current_app, g, redirect, request, url_for
 from werkzeug.exceptions import Forbidden, NotFound
 
 from auth.login import _render as render_secure_template
-from database import get_db
-from localization import translate_message
+from database import get_db, immediate_transaction, utc_now
+from localization import translate, translate_message
 from modules import security_settings, user_management
 from security.csrf import csrf_tokens_match
 from security.dns_canary import dns_canary_status
+from security.audit_integrity import verify_audit_chain
 from security.permissions import require_permission
+from security.security_log import record_security_event
 
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -95,13 +97,34 @@ def _redirect_users(notice):
     return redirect(url_for("admin.users", notice=notice), code=303)
 
 
-def _render_security(*, errors=(), field_errors=None, status=200):
+def _render_security(
+    *, errors=(), field_errors=None, status=200, integrity_result=None
+):
+    integrity_reason = None
+    if integrity_result and integrity_result["reason"]:
+        reason_key = {
+            "Audit hash fields are missing or only partially initialized.": (
+                "admin.audit_integrity_reason_uninitialized"
+            ),
+            "A stored audit hash is missing or invalid.": (
+                "admin.audit_integrity_reason_hash"
+            ),
+            "The link to the preceding audit entry is invalid.": (
+                "admin.audit_integrity_reason_link"
+            ),
+            "The protected audit event content does not match its hash.": (
+                "admin.audit_integrity_reason_content"
+            ),
+        }.get(integrity_result["reason"], "admin.audit_integrity_reason_unknown")
+        integrity_reason = translate(reason_key)
     return render_secure_template(
         "admin/security.html",
         status=status,
         errors=errors,
         field_errors=field_errors or {},
         notice=NOTICES.get(request.args.get("notice")),
+        integrity_result=integrity_result,
+        integrity_reason=integrity_reason,
         settings=security_settings.current_settings(get_db()),
         dns_canary=dns_canary_status(
             current_app.instance_path,
@@ -295,6 +318,27 @@ def reset_password(user_id):
 @require_permission("security.manage")
 def security():
     return _render_security()
+
+
+@bp.post("/security/audit-integrity")
+@require_permission("security.manage")
+@require_security_csrf
+def verify_audit_integrity():
+    connection = get_db()
+    with immediate_transaction(connection):
+        now = utc_now()
+        result = verify_audit_chain(connection, now=now)
+        if result["status"] == "INTACT":
+            record_security_event(
+                connection,
+                "audit_integrity_verified",
+                "Audit integrity verified; "
+                f"checked_entries={result['checked_entries']}.",
+                actor_id=g.user["id"],
+                outcome="SUCCESS",
+                now=now,
+            )
+    return _render_security(integrity_result=result)
 
 
 @bp.post("/security/forbidden-policy")
