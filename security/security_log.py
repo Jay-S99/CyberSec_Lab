@@ -5,6 +5,7 @@ import sqlite3
 from flask import has_request_context, request
 
 from database import format_utc, utc_now
+from security.audit_integrity import calculate_entry_hash, chain_head
 
 
 _EVENT_TYPE_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
@@ -42,14 +43,12 @@ def record_security_event(
     resolved_ip = source_ip
     if resolved_ip is None and has_request_context():
         resolved_ip = request.remote_addr
-    connection.execute(
-        """
-        INSERT INTO security_events (
-            user_id, actor_type, target_user_id, ip_address, event_type,
-            description, outcome, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
+    owns_transaction = not connection.in_transaction
+    if owns_transaction:
+        connection.execute("BEGIN IMMEDIATE")
+    try:
+        _previous_event_id, previous_hash = chain_head(connection)
+        values = (
             actor_id,
             resolved_actor_type,
             target_user_id,
@@ -58,8 +57,34 @@ def record_security_event(
             _bounded_log_value(description, 512),
             outcome,
             format_utc(now or utc_now()),
-        ),
-    )
+        )
+        cursor = connection.execute(
+            """
+            INSERT INTO security_events (
+                user_id, actor_type, target_user_id, ip_address, event_type,
+                description, outcome, created_at, previous_hash, entry_hash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+            """,
+            values,
+        )
+        stored_event = connection.execute(
+            "SELECT * FROM security_events WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+        entry_hash = calculate_entry_hash(stored_event, previous_hash)
+        connection.execute(
+            """
+            UPDATE security_events
+            SET previous_hash = ?, entry_hash = ?
+            WHERE id = ?
+            """,
+            (previous_hash, entry_hash, cursor.lastrowid),
+        )
+        if owns_transaction:
+            connection.commit()
+    except Exception:
+        if owns_transaction:
+            connection.rollback()
+        raise
 
 
 def record_admin_event(connection, actor_id, target_id, event_type, now):
