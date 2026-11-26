@@ -1,7 +1,65 @@
 import logging
+import re
 import sqlite3
 
+from flask import has_request_context, request
+
 from database import format_utc, utc_now
+
+
+_EVENT_TYPE_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
+_OUTCOMES = frozenset({"SUCCESS", "FAILURE"})
+_ACTOR_TYPES = frozenset({"USER", "UNAUTHENTICATED", "SYSTEM"})
+
+
+def record_security_event(
+    connection,
+    event_type,
+    description,
+    *,
+    actor_id=None,
+    actor_type=None,
+    target_user_id=None,
+    outcome,
+    now=None,
+    source_ip=None,
+):
+    if not isinstance(event_type, str) or not _EVENT_TYPE_PATTERN.fullmatch(
+        event_type
+    ):
+        raise ValueError("Unsupported security event type.")
+    if outcome not in _OUTCOMES:
+        raise ValueError("Unsupported security event outcome.")
+    resolved_actor_type = actor_type or (
+        "USER" if actor_id is not None else "SYSTEM"
+    )
+    if resolved_actor_type not in _ACTOR_TYPES:
+        raise ValueError("Unsupported security event actor type.")
+    if resolved_actor_type == "USER" and actor_id is None:
+        raise ValueError("A user actor requires an actor identifier.")
+    if actor_id is not None and resolved_actor_type != "USER":
+        raise ValueError("Only a user actor may have an actor identifier.")
+    resolved_ip = source_ip
+    if resolved_ip is None and has_request_context():
+        resolved_ip = request.remote_addr
+    connection.execute(
+        """
+        INSERT INTO security_events (
+            user_id, actor_type, target_user_id, ip_address, event_type,
+            description, outcome, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            actor_id,
+            resolved_actor_type,
+            target_user_id,
+            _bounded_log_value(resolved_ip, 64, unknown=None),
+            event_type,
+            _bounded_log_value(description, 512),
+            outcome,
+            format_utc(now or utc_now()),
+        ),
+    )
 
 
 def record_admin_event(connection, actor_id, target_id, event_type, now):
@@ -13,25 +71,23 @@ def record_admin_event(connection, actor_id, target_id, event_type, now):
         "user_unblocked": "Account unblocked",
         "user_deleted": "Account deleted",
         "user_password_reset": "Account credential reset",
+        "password_reset": "Account credential reset",
     }
-    description = f"{descriptions[event_type]}; target_user_id={target_id}."
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (actor_id, event_type, description, format_utc(now)),
+    record_security_event(
+        connection,
+        event_type,
+        f"{descriptions[event_type]}; target_user_id={target_id}.",
+        actor_id=actor_id,
+        target_user_id=target_id,
+        outcome="SUCCESS",
+        now=now,
     )
 
 
 def record_security_configuration_event(
-    connection,
-    actor_id,
-    event_type,
-    description,
-    now,
+    connection, actor_id, event_type, description, now
 ):
-    allowed_event_types = {
+    allowed = {
         "security_setting_changed",
         "password_policy_enabled",
         "password_policy_disabled",
@@ -41,35 +97,40 @@ def record_security_configuration_event(
         "password_validity_changed",
         "session_timeout_changed",
     }
-    if event_type not in allowed_event_types:
+    if event_type not in allowed:
         raise ValueError("Unsupported security configuration event.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (actor_id, event_type, description, format_utc(now)),
+    record_security_event(
+        connection,
+        event_type,
+        description,
+        actor_id=actor_id,
+        outcome="SUCCESS",
+        now=now,
     )
 
 
 def record_login_protection_event(
     connection, user_id, event_type, description, now
 ):
-    allowed_event_types = {
+    allowed = {
         "login_failure",
         "login_honeypot_triggered",
         "account_temporarily_locked",
         "account_lockout_expired",
         "ip_rate_limit_triggered",
     }
-    if event_type not in allowed_event_types:
+    if event_type not in allowed:
         raise ValueError("Unsupported login protection event.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (user_id, event_type, description, format_utc(now)),
+    record_security_event(
+        connection,
+        event_type,
+        description,
+        actor_type="UNAUTHENTICATED",
+        target_user_id=user_id,
+        outcome=(
+            "SUCCESS" if event_type == "account_lockout_expired" else "FAILURE"
+        ),
+        now=now,
     )
 
 
@@ -80,63 +141,63 @@ def record_turnstile_event(connection, user_id, event_type, action, now):
     }
     if event_type not in descriptions:
         raise ValueError("Unsupported Turnstile event.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            user_id,
-            event_type,
-            f"{descriptions[event_type]}; action={action}.",
-            format_utc(now),
-        ),
+    record_security_event(
+        connection,
+        event_type,
+        f"{descriptions[event_type]}; action={action}.",
+        actor_id=user_id,
+        actor_type="USER" if user_id is not None else "UNAUTHENTICATED",
+        outcome="FAILURE",
+        now=now,
     )
 
 
 def record_canary_account_event(
     connection, identifier, source_ip, user_agent, now
 ):
-    safe_ip = _bounded_log_value(source_ip, 64)
-    safe_user_agent = _bounded_log_value(user_agent, 256)
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (NULL, 'canary_account_triggered', ?, ?)
-        """,
-        (
-            "Canary account targeted; category=honeytoken_detection; "
-            f"severity=high; identifier={identifier}; source_ip={safe_ip}; "
-            f"user_agent={safe_user_agent}.",
-            format_utc(now),
-        ),
+    record_security_event(
+        connection,
+        "canary_account_triggered",
+        "Canary account targeted; category=honeytoken_detection; severity=high; "
+        f"identifier={_bounded_log_value(identifier, 64)}; "
+        f"user_agent={_bounded_log_value(user_agent, 256)}.",
+        actor_type="UNAUTHENTICATED",
+        outcome="FAILURE",
+        now=now,
+        source_ip=source_ip,
     )
 
 
-def _bounded_log_value(value, maximum_length):
+def _bounded_log_value(value, maximum_length, *, unknown="unknown"):
+    if value is None and unknown is None:
+        return None
     normalized = "".join(
-        character if character.isprintable() else "?"
-        for character in str(value or "unknown")
+        character if character.isprintable() and character not in "\r\n" else "?"
+        for character in str(value or unknown)
     )
     return normalized[:maximum_length]
 
 
 def record_canary_alert_event(connection, event_type, description, now):
-    allowed_event_types = {
+    allowed = {
         "canary_alert_dispatch_started",
         "canary_alert_dispatch_succeeded",
         "canary_alert_dispatch_failed",
         "canary_alert_not_configured",
         "canary_alert_configuration_invalid",
     }
-    if event_type not in allowed_event_types:
+    if event_type not in allowed:
         raise ValueError("Unsupported canary alert event.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (NULL, ?, ?, ?)
-        """,
-        (event_type, description, format_utc(now)),
+    outcome = (
+        "SUCCESS" if event_type.endswith(("started", "succeeded")) else "FAILURE"
+    )
+    record_security_event(
+        connection,
+        event_type,
+        description,
+        actor_type="SYSTEM",
+        outcome=outcome,
+        now=now,
     )
 
 
@@ -165,17 +226,13 @@ def record_dossier_event(
             f"{descriptions[event_type]}; dossier_id={dossier_id}; "
             f"previous_classification={previous_classification}."
         )
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            actor_id,
-            event_type,
-            description,
-            format_utc(now),
-        ),
+    record_security_event(
+        connection,
+        event_type,
+        description,
+        actor_id=actor_id,
+        outcome="SUCCESS",
+        now=now,
     )
 
 
@@ -186,43 +243,31 @@ def record_incident_event(connection, actor_id, incident_id, event_type, now):
     }
     if event_type not in descriptions:
         raise ValueError("Unsupported incident event.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            actor_id,
-            event_type,
-            f"{descriptions[event_type]}; incident_id={incident_id}.",
-            format_utc(now),
-        ),
+    record_security_event(
+        connection,
+        event_type,
+        f"{descriptions[event_type]}; incident_id={incident_id}.",
+        actor_id=actor_id,
+        outcome="SUCCESS",
+        now=now,
     )
 
 
 def record_workflow_transition_denied(
-    connection,
-    actor_id,
-    resource_kind,
-    resource_id,
-    action,
-    now,
+    connection, actor_id, resource_kind, resource_id, action, now
 ):
     if resource_kind not in {"dossier", "incident"}:
         raise ValueError("Unsupported workflow resource.")
     if action not in {"submit", "approve", "reject", "declassify", "convert"}:
         raise ValueError("Unsupported workflow action.")
-    connection.execute(
-        """
-        INSERT INTO security_events (user_id, event_type, description, created_at)
-        VALUES (?, 'workflow_transition_denied', ?, ?)
-        """,
-        (
-            actor_id,
-            "Workflow transition denied; "
-            f"resource={resource_kind}:{resource_id}; action={action}.",
-            format_utc(now),
-        ),
+    record_security_event(
+        connection,
+        "workflow_transition_denied",
+        f"Workflow transition denied; resource={resource_kind}:{resource_id}; "
+        f"action={action}.",
+        actor_id=actor_id,
+        outcome="FAILURE",
+        now=now,
     )
 
 
@@ -233,16 +278,15 @@ def record_session_event(connection, user_id, event_type, now):
         "session_revoked": "Session revoked.",
         "session_logout": "User signed out.",
     }
-    description = descriptions[event_type]
     connection.execute("SAVEPOINT session_event")
     try:
-        connection.execute(
-            """
-            INSERT INTO security_events (
-                user_id, event_type, description, created_at
-            ) VALUES (?, ?, ?, ?)
-            """,
-            (user_id, event_type, description, format_utc(now)),
+        record_security_event(
+            connection,
+            event_type,
+            descriptions[event_type],
+            actor_id=user_id,
+            outcome="SUCCESS",
+            now=now,
         )
     except sqlite3.Error:
         connection.execute("ROLLBACK TO session_event")
@@ -253,21 +297,15 @@ def record_session_event(connection, user_id, event_type, now):
 
 def record_authorization_denied(connection, user_id, operation):
     try:
-        record = (
-            user_id,
-            "authorization_denied",
-            f"Access denied for operation: {operation}.",
-            format_utc(utc_now()),
-        )
         connection.execute("SAVEPOINT authorization_event")
         try:
-            connection.execute(
-                """
-                INSERT INTO security_events (
-                    user_id, event_type, description, created_at
-                ) VALUES (?, ?, ?, ?)
-                """,
-                record,
+            record_security_event(
+                connection,
+                "authorization_denied",
+                f"Access denied for operation: {operation}.",
+                actor_id=user_id,
+                actor_type=("USER" if user_id is not None else "UNAUTHENTICATED"),
+                outcome="FAILURE",
             )
         except sqlite3.Error:
             connection.execute("ROLLBACK TO authorization_event")
