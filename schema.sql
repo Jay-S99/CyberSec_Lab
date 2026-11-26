@@ -191,6 +191,10 @@ CREATE TABLE IF NOT EXISTS security_events (
     description TEXT NOT NULL CHECK (length(trim(description)) > 0),
     outcome TEXT CHECK (outcome IN ('SUCCESS', 'FAILURE') OR outcome IS NULL),
     created_at TEXT NOT NULL,
+    previous_hash TEXT CHECK (
+        previous_hash IS NULL OR length(previous_hash) = 128
+    ),
+    entry_hash TEXT CHECK (entry_hash IS NULL OR length(entry_hash) = 128),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
     FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE RESTRICT
 );

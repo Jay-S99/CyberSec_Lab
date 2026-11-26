@@ -99,7 +99,7 @@ def _column_names(connection, table_name):
 
 
 def apply_schema_updates(connection):
-    """Add nullable lifecycle columns to older databases without losing rows."""
+    """Add required columns to older databases without losing rows."""
     changed = (
         not _table_exists(connection, "login_throttles")
         or not _table_exists(connection, "canary_identities")
@@ -221,6 +221,8 @@ def apply_schema_updates(connection):
                 "outcome",
                 "TEXT CHECK (outcome IN ('SUCCESS', 'FAILURE') OR outcome IS NULL)",
             ),
+            ("previous_hash", "TEXT"),
+            ("entry_hash", "TEXT"),
         )
         for column_name, definition in event_additions:
             if column_name not in event_columns:
