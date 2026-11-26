@@ -11,6 +11,7 @@
     {% endif %}
     {% if can_manage_security %}
       <a class="{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %}is-active{% endif %}"{% if request.endpoint in ('admin.security', 'admin.forbidden_words') %} aria-current="page"{% endif %} href="{{ url_for('admin.security') }}">{{ t('admin.security_settings') }}</a>
+      <a class="{% if request.endpoint in ('admin.security_logs', 'admin.export_security_logs') %}is-active{% endif %}"{% if request.endpoint in ('admin.security_logs', 'admin.export_security_logs') %} aria-current="page"{% endif %} href="{{ url_for('admin.security_logs') }}">{{ t('admin.security_logs') }}</a>
     {% endif %}
   </nav>
 </header>

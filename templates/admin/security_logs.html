@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ t('admin.security_logs') }} - DoomVault{% endblock %}
+{% block admin_content %}
+<div class="page-header admin-page-title">
+  <div>
+    <p class="eyebrow">{{ t('admin.security_logs_eyebrow') }}</p>
+    <h1>{{ t('admin.security_logs_heading_one') }} <span>{{ t('admin.security_logs_heading_two') }}</span></h1>
+    <p>{{ t('admin.security_logs_intro') }}</p>
+  </div>
+</div>
+
+<form class="admin-filters security-log-filters" method="get" action="{{ url_for('admin.security_logs') }}">
+  <div>
+    <label for="security-log-user">{{ t('admin.security_logs_user') }}</label>
+    <select id="security-log-user" name="user">
+      <option value="">{{ t('admin.security_logs_all_users') }}</option>
+      {% for user in users %}<option value="{{ user.id }}"{% if filters.user_id == user.id %} selected{% endif %}>{{ user.username }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="security-log-date-from">{{ t('admin.security_logs_date_from') }}</label>
+    <input id="security-log-date-from" name="date_from" type="date" value="{{ filters.date_from }}">
+  </div>
+  <div>
+    <label for="security-log-date-to">{{ t('admin.security_logs_date_to') }}</label>
+    <input id="security-log-date-to" name="date_to" type="date" value="{{ filters.date_to }}">
+  </div>
+  <div>
+    <label for="security-log-event-type">{{ t('admin.security_logs_event_type') }}</label>
+    <select id="security-log-event-type" name="event_type">
+      <option value="">{{ t('admin.security_logs_all_events') }}</option>
+      {% for event_type in event_types %}<option value="{{ event_type }}"{% if filters.event_type == event_type %} selected{% endif %}>{{ event_type }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="security-log-page-size">{{ t('admin.security_logs_page_size') }}</label>
+    <select id="security-log-page-size" name="page_size">
+      <option value="25"{% if page_size == 25 %} selected{% endif %}>25</option>
+      <option value="50"{% if page_size == 50 %} selected{% endif %}>50</option>
+    </select>
+  </div>
+  <div class="admin-filter-actions">
+    <button class="button button-primary" type="submit">{{ t('admin.security_logs_apply') }}</button>
+    <a class="button button-ghost" href="{{ url_for('admin.security_logs') }}">{{ t('admin.security_logs_clear') }}</a>
+  </div>
+</form>
+
+<div class="security-log-toolbar">
+  <p>{{ t('admin.security_logs_count', count=total) }}</p>
+  <div>
+    <a class="button button-ghost" href="{{ url_for('admin.security') }}#audit-integrity-heading">{{ t('admin.security_logs_verify_integrity') }}</a>
+    <form method="post" action="{{ url_for('admin.export_security_logs') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="user" value="{{ filters.user_id or '' }}">
+      <input type="hidden" name="date_from" value="{{ filters.date_from }}">
+      <input type="hidden" name="date_to" value="{{ filters.date_to }}">
+      <input type="hidden" name="event_type" value="{{ filters.event_type }}">
+      <button class="button button-primary" type="submit">{{ t('admin.security_logs_export') }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="data-table-wrap security-log-table-wrap">
+  <table class="data-table admin-table security-log-table">
+    <caption class="admin-visually-hidden">{{ t('admin.security_logs_table_caption') }}</caption>
+    <thead><tr>
+      <th scope="col">{{ t('admin.security_logs_event_id') }}</th>
+      <th scope="col">{{ t('admin.security_logs_timestamp') }}</th>
+      <th scope="col">{{ t('admin.security_logs_actor') }}</th>
+      <th scope="col">{{ t('admin.security_logs_affected_user') }}</th>
+      <th scope="col">{{ t('admin.security_logs_source_ip') }}</th>
+      <th scope="col">{{ t('admin.security_logs_event_type') }}</th>
+      <th scope="col">{{ t('admin.security_logs_description') }}</th>
+      <th scope="col">{{ t('admin.security_logs_outcome') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>#{{ event.id }}</td>
+        <td><time datetime="{{ event.created_at }}">{{ event.created_at }}</time></td>
+        <td>{% if event.actor_username %}{{ event.actor_username }}{% else %}{{ event.actor_type|lower|replace('_', ' ') }}{% endif %}</td>
+        <td>{{ event.target_username or '—' }}</td>
+        <td>{{ event.ip_address or '—' }}</td>
+        <td><code>{{ event.event_type }}</code></td>
+        <td class="security-log-description">{{ event.description }}</td>
+        <td>
+          {% if event.outcome == 'SUCCESS' %}<span class="admin-status admin-status-active">{{ t('admin.security_logs_success') }}</span>
+          {% elif event.outcome == 'FAILURE' %}<span class="admin-status admin-status-blocked">{{ t('admin.security_logs_failure') }}</span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="security-log-empty" colspan="8">{{ t('admin.security_logs_empty') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_count > 1 %}
+<nav class="security-log-pagination" aria-label="{{ t('admin.security_logs_pagination') }}">
+  {% if page > 1 %}<a class="button button-ghost" href="{{ url_for('admin.security_logs', page=page - 1, **query_parameters) }}">{{ t('admin.security_logs_previous') }}</a>{% endif %}
+  <span>{{ t('admin.security_logs_page', page=page, pages=page_count) }}</span>
+  {% if page < page_count %}<a class="button button-ghost" href="{{ url_for('admin.security_logs', page=page + 1, **query_parameters) }}">{{ t('admin.security_logs_next') }}</a>{% endif %}
+</nav>
+{% endif %}
+
+<p class="admin-muted operational-note">{{ t('admin.security_logs_read_only_note') }}</p>
+{% endblock %}
