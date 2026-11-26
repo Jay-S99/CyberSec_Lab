@@ -1,13 +1,21 @@
 import sqlite3
 from functools import wraps
 
-from flask import Blueprint, current_app, g, redirect, request, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    g,
+    make_response,
+    redirect,
+    request,
+    url_for,
+)
 from werkzeug.exceptions import Forbidden, NotFound
 
 from auth.login import _render as render_secure_template
 from database import get_db, immediate_transaction, utc_now
 from localization import translate, translate_message
-from modules import security_settings, user_management
+from modules import security_log_explorer, security_settings, user_management
 from security.csrf import csrf_tokens_match
 from security.dns_canary import dns_canary_status
 from security.audit_integrity import verify_audit_chain
@@ -175,6 +183,41 @@ def _redirect_forbidden_words(notice):
     return redirect(url_for("admin.forbidden_words", notice=notice), code=303)
 
 
+def _render_security_logs(*, values=None, errors=(), status=200):
+    connection = get_db()
+    values = values or request.args
+    try:
+        filters = security_log_explorer.parse_filters(values, connection)
+        page, page_size = security_log_explorer.parse_pagination(values)
+    except security_log_explorer.SecurityLogFilterError as error:
+        if not errors:
+            errors = (translate(str(error)),)
+        filters = security_log_explorer.parse_filters({}, connection)
+        page, page_size = 1, security_log_explorer.DEFAULT_PAGE_SIZE
+        status = 400
+    events, total, page, page_count = security_log_explorer.paginated_events(
+        connection, filters, page, page_size
+    )
+    users, event_types = security_log_explorer.filter_options(connection)
+    query_parameters = filters.query_parameters()
+    query_parameters["page_size"] = page_size
+    return render_secure_template(
+        "admin/security_logs.html",
+        status=status,
+        errors=errors,
+        notice=None,
+        events=events,
+        users=users,
+        event_types=event_types,
+        filters=filters,
+        total=total,
+        page=page,
+        page_size=page_size,
+        page_count=page_count,
+        query_parameters=query_parameters,
+    )
+
+
 @bp.errorhandler(user_management.UserManagementError)
 def handle_user_management_error(error):
     if error.status == 404:
@@ -318,6 +361,53 @@ def reset_password(user_id):
 @require_permission("security.manage")
 def security():
     return _render_security()
+
+
+@bp.get("/security-logs")
+@require_permission("security.manage")
+def security_logs():
+    return _render_security_logs()
+
+
+@bp.post("/security-logs/export")
+@require_permission("security.manage")
+def export_security_logs():
+    if not csrf_tokens_match():
+        return _render_security_logs(
+            values=request.form,
+            errors=(translate("admin.security_logs_error_csrf"),),
+            status=400,
+        )
+    connection = get_db()
+    try:
+        filters = security_log_explorer.parse_filters(request.form, connection)
+        with immediate_transaction(connection):
+            events = security_log_explorer.export_events(connection, filters)
+            now = utc_now()
+            record_security_event(
+                connection,
+                "audit_log_exported",
+                "Security log CSV generated; "
+                f"records={len(events)}; "
+                f"filters={security_log_explorer.describe_filters(filters)}.",
+                actor_id=g.user["id"],
+                outcome="SUCCESS",
+                now=now,
+            )
+    except security_log_explorer.SecurityLogFilterError as error:
+        return _render_security_logs(
+            values=request.form,
+            errors=(translate(str(error)),),
+            status=400,
+        )
+    csv_content = security_log_explorer.build_csv(events)
+    response = make_response(csv_content)
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="doomvault-security-logs-'
+        f'{now.strftime("%Y%m%d-%H%M%S")}-utc.csv"'
+    )
+    return response
 
 
 @bp.post("/security/audit-integrity")
